@@ -25,7 +25,7 @@ freely, subject to the following restrictions:
 #include <windows.h>
 #include <sstream>
 #include <stdio.h>
-#include <vector>;
+#include <vector>
 #include <regstr.h>
 
 //Converts uint to string.
@@ -36,7 +36,7 @@ static std::string uintToString(unsigned int i)
 	return ss.str();
 }
 
-//Converts uint to string.
+//Converts int to string.
 static std::string intToString(int i)
 {
 	std::stringstream ss;
