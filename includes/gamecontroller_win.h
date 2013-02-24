@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2012 Alexander O'Mara alexomara.com
+Copyright (c) 2012-2013 Alexander O'Mara alexomara.com
 
 This software is provided 'as-is', without any express or implied
 warranty. In no event will the authors be held liable for any damages
@@ -27,6 +27,11 @@ freely, subject to the following restrictions:
 #include <stdio.h>
 #include <vector>
 #include <regstr.h>
+
+//Set the total supported controller ID's (16 usually).
+static unsigned int controllers = joyGetNumDevs();
+//Vector of cached controller names read from the registry.
+static std::vector<std::string> controllerNames(controllers);
 
 //Converts uint to string.
 static std::string uintToString(unsigned int i)
@@ -68,20 +73,25 @@ static std::string replaceQuotes(std::string str)
 }
 
 //Looks up a controller description in the registry.
-static std::string controllerName(unsigned int controllerID, JOYCAPS joycaps)
+static std::string controllerName(unsigned int controllerID, JOYCAPS joycaps, std::string fallbackName)
 {
 	//Descrition of the controller.
-	char * controllerDescription;
+	char * productKey;
 	//Registry key path.
 	char subkey[256];
 	//Registry keys.
-	HKEY rootKey, currentKey;
+	HKEY rootKey,
+		currentKey;
 	//Successful read variable.
 	LONG regSuccess;
 	//For reading in the key.
 	char keyName[256],
 		keyData[256];
 	DWORD keyNameSizeOf;
+	std::string controllerDescription;
+
+	//Set it to fallback by default.s
+	controllerDescription = fallbackName;
 
 	//Merge the registry path together.
 	snprintf(subkey, 256, "%s\\%s\\%s", REGSTR_PATH_JOYCONFIG, joycaps.szRegKey, REGSTR_KEY_JOYCURR);
@@ -119,30 +129,30 @@ static std::string controllerName(unsigned int controllerID, JOYCAPS joycaps)
 				if(regSuccess == ERROR_SUCCESS)
 				{
 					//Read the key data into the description.
-					controllerDescription = (char*)malloc(keyNameSizeOf);
-					regSuccess = RegQueryValueEx(currentKey, REGSTR_VAL_JOYOEMNAME, NULL, NULL, (LPBYTE) controllerDescription, &keyNameSizeOf);
+					productKey = (char*)malloc(keyNameSizeOf);
+					regSuccess = RegQueryValueEx(currentKey, REGSTR_VAL_JOYOEMNAME, NULL, NULL, (LPBYTE) productKey, &keyNameSizeOf);
 				}
 				//Close the key.
 				RegCloseKey(currentKey);
 
-				//Return the description.
+				//Set the description.
 				if(regSuccess == ERROR_SUCCESS)
 				{
-					return replaceQuotes(controllerDescription);
+					controllerDescription = productKey;
+					//If the returned value is blank, use the fallback.
+					if(controllerDescription == "")
+					{
+						controllerDescription = fallbackName;
+					}
 				}
-				free(controllerDescription);
+				free(productKey);
 			}
 		}
 	}
 
 	//Fallback controller name.
-	return "null";
+	return controllerDescription;
 }
-
-//Set the total supported controller ID's (16 usually).
-static unsigned int controllers = joyGetNumDevs();
-//Vector of cached controller names read from the registry.
-static std::vector<std::string> controllerNames(controllers);
 
 //Returns an XML string of all the game controller states.
 std::string ControlStates()
@@ -168,9 +178,6 @@ std::string ControlStates()
 	//The string we will output the states as.
 	state = "<r>";
 
-	//Set the total supported controller ID's (16 usually).
-	controllers = joyGetNumDevs();
-
 	//Loop through the possible controllers.
 	for(controller = 0; controller < controllers; controller++)
 	{
@@ -182,10 +189,10 @@ std::string ControlStates()
 		controllerID = JOYSTICKID1 + controller;
 		if(joyGetPosEx(controllerID, &joyinfo) == JOYERR_NOERROR && joyGetDevCaps(controllerID, &joycaps, sizeof(JOYCAPS)) == JOYERR_NOERROR)
 		{
-			//If the controller name hasn' been set, look it up in the registry and cache it.
+			//If the controller name hasn't been set, look it up in the registry and cache it.
 			if(controllerNames[controllerID] == "")
 			{
-				controllerNames[controllerID] = controllerName(controllerID, joycaps);
+				controllerNames[controllerID] = replaceQuotes(controllerName(controllerID, joycaps, joycaps.szPname));
 			}
 			//Keep count on which axes exist.
 			controllerAxis = 2;
@@ -201,9 +208,7 @@ std::string ControlStates()
 			state += "<c id=\"" +
 				uintToString(controllerID) +
 				"\" name=\"" +
-				(controllerNames[controllerID] == "null" ? "" : controllerNames[controllerID]) +
-				"\" drvr=\"" +
-				replaceQuotes(joycaps.szPname) +
+				controllerNames[controllerID] +
 				"\" x=\"0\" y=\"1\" z=\"" +
 				intToString(controllerZ) +
 				"\" r=\"" +

@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		AA57DA3B160FD26100651A61 /* IOKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AA57DA3A160FD26100651A61 /* IOKit.framework */; };
+		AA57DA3D160FD28B00651A61 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AA57DA3C160FD28B00651A61 /* CoreFoundation.framework */; };
 		AA8F6A57160F6545003332FD /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AA8F6A56160F6545003332FD /* main.cpp */; };
 		AA8F6A59160F6545003332FD /* includes_test_mac.1 in CopyFiles */ = {isa = PBXBuildFile; fileRef = AA8F6A58160F6545003332FD /* includes_test_mac.1 */; };
 /* End PBXBuildFile section */
@@ -25,6 +27,9 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		AA510F3B16D84DBE006D6FBD /* gamecontroller_mac.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = gamecontroller_mac.h; path = ../../includes/gamecontroller_mac.h; sourceTree = "<group>"; };
+		AA57DA3A160FD26100651A61 /* IOKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOKit.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.7.sdk/System/Library/Frameworks/IOKit.framework; sourceTree = DEVELOPER_DIR; };
+		AA57DA3C160FD28B00651A61 /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.7.sdk/System/Library/Frameworks/CoreFoundation.framework; sourceTree = DEVELOPER_DIR; };
 		AA8F6A52160F6545003332FD /* includes_test_mac */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = includes_test_mac; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA8F6A56160F6545003332FD /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		AA8F6A58160F6545003332FD /* includes_test_mac.1 */ = {isa = PBXFileReference; lastKnownFileType = text.man; path = includes_test_mac.1; sourceTree = "<group>"; };
@@ -35,6 +40,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AA57DA3D160FD28B00651A61 /* CoreFoundation.framework in Frameworks */,
+				AA57DA3B160FD26100651A61 /* IOKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -44,6 +51,9 @@
 		AA8F6A47160F6545003332FD = {
 			isa = PBXGroup;
 			children = (
+				AA510F3B16D84DBE006D6FBD /* gamecontroller_mac.h */,
+				AA57DA3C160FD28B00651A61 /* CoreFoundation.framework */,
+				AA57DA3A160FD26100651A61 /* IOKit.framework */,
 				AA8F6A55160F6545003332FD /* includes_test_mac */,
 				AA8F6A53160F6545003332FD /* Products */,
 			);
@@ -92,7 +102,7 @@
 		AA8F6A49160F6545003332FD /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0440;
+				LastUpgradeCheck = 0460;
 				ORGANIZATIONNAME = "Alexander O'Mara";
 			};
 			buildConfigurationList = AA8F6A4C160F6545003332FD /* Build configuration list for PBXProject "includes_test_mac" */;
@@ -128,7 +138,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
@@ -146,7 +156,7 @@
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.7;
+				MACOSX_DEPLOYMENT_TARGET = 10.6;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
 			};
@@ -156,7 +166,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
@@ -168,7 +178,7 @@
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.7;
+				MACOSX_DEPLOYMENT_TARGET = 10.6;
 				SDKROOT = macosx;
 			};
 			name = Release;
@@ -176,11 +186,11 @@
 		AA8F6A5D160F6545003332FD /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD_32_64_BIT)";
+				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
 				HEADER_SEARCH_PATHS = "../../includes/**";
 				MACOSX_DEPLOYMENT_TARGET = 10.6;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx10.7;
+				SDKROOT = macosx;
 				USER_HEADER_SEARCH_PATHS = "";
 			};
 			name = Debug;
@@ -188,11 +198,11 @@
 		AA8F6A5E160F6545003332FD /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD_32_64_BIT)";
+				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
 				HEADER_SEARCH_PATHS = "../../includes/**";
 				MACOSX_DEPLOYMENT_TARGET = 10.6;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx10.7;
+				SDKROOT = macosx;
 				USER_HEADER_SEARCH_PATHS = "";
 			};
 			name = Release;
@@ -216,6 +226,7 @@
 				AA8F6A5E160F6545003332FD /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
