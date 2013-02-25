@@ -158,18 +158,11 @@ static std::string controllerName(unsigned int controllerID, JOYCAPS joycaps, st
 std::string ControlStates()
 {
 	std::string state;
+
 	//For total supported controllers, current ID, and indexing.
 	unsigned int controllerID,
 		controller,
-		controllerAxis,
 		controllerButton;
-	//X is always 0, Y is always 1 (it appears that these are required in all game controllers).
-	int	controllerZ,
-		controllerR,
-		controllerU,
-		controllerV,
-		controllerPOVX,
-		controllerPOVY;
 
 	//Controller types.
 	JOYINFOEX joyinfo;
@@ -194,92 +187,69 @@ std::string ControlStates()
 			{
 				controllerNames[controllerID] = replaceQuotes(controllerName(controllerID, joycaps, joycaps.szPname));
 			}
-			//Keep count on which axes exist.
-			controllerAxis = 2;
-			//Set which axes exists, and which don't (-1).
-			controllerZ = ((joycaps.wCaps & JOYCAPS_HASZ) ? controllerAxis++ : -1);
-			controllerR = ((joycaps.wCaps & JOYCAPS_HASR) ? controllerAxis++ : -1);
-			controllerU = ((joycaps.wCaps & JOYCAPS_HASU) ? controllerAxis++ : -1);
-			controllerV = ((joycaps.wCaps & JOYCAPS_HASV) ? controllerAxis++ : -1);
-			controllerPOVX = ((joycaps.wCaps & JOYCAPS_HASPOV) ? controllerAxis++ : -1);
-			controllerPOVY = ((joycaps.wCaps & JOYCAPS_HASPOV) ? controllerAxis++ : -1);
-
 			//Add controller to the list.
-			state += "<c id=\"" +
-				uintToString(controllerID) +
-				"\" name=\"" +
-				controllerNames[controllerID] +
-				"\" x=\"0\" y=\"1\" z=\"" +
-				intToString(controllerZ) +
-				"\" r=\"" +
-				intToString(controllerR) +
-				"\" u=\"" +
-				intToString(controllerU) +
-				"\" v=\"" +
-				intToString(controllerV) +
-				"\" px=\"" +
-				intToString(controllerPOVX) +
-				"\" py=\"" +
-				intToString(controllerPOVY) +
-				"\"><a>";
+			state += "<c id=\"" + uintToString(controllerID) + "\" name=\"" + controllerNames[controllerID] + "\"><a>";
 
-			//Calculate the current axis position from either extremity on a range or -1 - 1 (((cur - min) / (max - min) * 2) - 1) Y is reversed.
-			state += floatToString(((float)(joyinfo.dwXpos - joycaps.wXmin) / (float)(joycaps.wXmax - joycaps.wXmin) * 2) - 1) +
-				"," +
-				floatToString(((float)(joyinfo.dwYpos - joycaps.wYmin) / (float)(joycaps.wYmax - joycaps.wYmin) * -2) + 1);
+			//Calculate the current axis position from either extremity on a range or -1 - 1 (((cur - min) / (max - min) * 2) - 1) Y is reversed. X is always 0, Y is always 1.
+			state += "<d a=\"x\">" + floatToString(((float)(joyinfo.dwXpos - joycaps.wXmin) / (float)(joycaps.wXmax - joycaps.wXmin) * 2) - 1) + "</d>" +
+				"<d a=\"y\">" + floatToString(((float)(joyinfo.dwYpos - joycaps.wYmin) / (float)(joycaps.wYmax - joycaps.wYmin) * -2) + 1) + "</d>";
 
 			//Add as many other axes as exist.
-			if(controllerZ != -1)
+			if(joycaps.wCaps & JOYCAPS_HASZ)
 			{
-				state += "," + floatToString(((float)(joyinfo.dwZpos - joycaps.wZmin) / (float)(joycaps.wZmax - joycaps.wZmin) * 2) - 1);
+				state += "<d a=\"z\">" + floatToString(((float)(joyinfo.dwZpos - joycaps.wZmin) / (float)(joycaps.wZmax - joycaps.wZmin) * 2) - 1) + "</d>";
 			}
-			if(controllerR != -1)
+			if(joycaps.wCaps & JOYCAPS_HASR)
 			{
-				state += "," + floatToString(((float)(joyinfo.dwRpos - joycaps.wRmin) / (float)(joycaps.wRmax - joycaps.wRmin) * 2) - 1);
+				state += "<d a=\"r\">" + floatToString(((float)(joyinfo.dwRpos - joycaps.wRmin) / (float)(joycaps.wRmax - joycaps.wRmin) * 2) - 1) + "</d>";
 			}
-			if(controllerU != -1)
+			if(joycaps.wCaps & JOYCAPS_HASU)
 			{
-				state += "," + floatToString(((float)(joyinfo.dwUpos - joycaps.wUmin) / (float)(joycaps.wUmax - joycaps.wUmin) * 2) - 1);
+				state += "<d a=\"u\">" + floatToString(((float)(joyinfo.dwUpos - joycaps.wUmin) / (float)(joycaps.wUmax - joycaps.wUmin) * 2) - 1) + "</d>";
 			}
-			if(controllerV != -1)
+			if(joycaps.wCaps & JOYCAPS_HASV)
 			{
-				state += "," + floatToString(((float)(joyinfo.dwVpos - joycaps.wVmin) / (float)(joycaps.wVmax - joycaps.wVmin) * 2) - 1);
+				state += "<d a=\"v\">" + floatToString(((float)(joyinfo.dwVpos - joycaps.wVmin) / (float)(joycaps.wVmax - joycaps.wVmin) * 2) - 1) + "</d>";
 			}
-			//POV axes.
-			if(controllerPOVX != -1 && controllerPOVY != -1)
+			//POV axes (these are also reversed).
+			if(joycaps.wCaps & JOYCAPS_HASPOV)
 			{
+				std::string povx;
+				std::string povy;
 				if(joyinfo.dwPOV == JOY_POVCENTERED)
 				{
-					state += ",0,0";
+					povx = "0";
+					povy = "0";
 				}
 				else
 				{
 					if(joyinfo.dwPOV > JOY_POVFORWARD && joyinfo.dwPOV < JOY_POVBACKWARD)
 					{
-						state += ",1";
+						povx = "1";
 					}
 					else if(joyinfo.dwPOV > JOY_POVBACKWARD)
 					{
-						state += ",-1";
+						povx = "-1";
 					}
 					else
 					{
-						state += ",0";
+						povx = "0";
 					}
 
 					if(joyinfo.dwPOV > JOY_POVLEFT || joyinfo.dwPOV < JOY_POVRIGHT)
 					{
-						state += ",-1";
+						povy = "1";
 					}
 					else if(joyinfo.dwPOV > JOY_POVRIGHT && joyinfo.dwPOV < JOY_POVLEFT)
 					{
-						state += ",1";
+						povy = "-1";
 					}
 					else
 					{
-						state += ",0";
+						povy = "0";
 					}
 				}
+				state += "<d p=\"x\">" + povx + "</d><d p=\"y\">" + povy + "</d>";
 			}
 			state += "</a><b>";
 

@@ -41,6 +41,11 @@ static std::vector<std::string> controllerNames;//(controllers);
 static IOHIDManagerRef hidManager = NULL;
 //The devices to match againts.
 static CFArrayRef deviceMatch = NULL;
+//The hypothetical axes names and counters to keep track of them.
+static std::string axesNames[] = {"x", "y", "z", "r", "u", "v", "?"};
+static unsigned int axesNamesLength = 7;
+static unsigned int axesNamesIndex = 0;
+static unsigned int povNamesIndex = 0;
 
 //Converts uint to string.
 static std::string uintToString(unsigned int i)
@@ -207,8 +212,6 @@ std::string ControlStates()
 			controllers = deviceCount;
 		}
 		
-		std::cout << deviceCount << "\n";
-		
 		//Memory to extract device refs to.
 		IOHIDDeviceRef * deviceRefs = (IOHIDDeviceRef*)malloc(sizeof(IOHIDDeviceRef) * deviceCount);
 		
@@ -221,9 +224,17 @@ std::string ControlStates()
 			IOHIDDeviceRef device;
 			IOHIDElementRef element;
 			IOHIDElementType type;
+			IOHIDValueRef value;
 			CFArrayRef elements;
 			CFIndex elementIndex,
 				elementCount;
+			std::string axesStates,
+				buttonStates;
+			
+			axesStates = "";
+			buttonStates = "";
+			axesNamesIndex = 0;
+			povNamesIndex = 0;
 			
 			//Get the current device.
 			device = deviceRefs[controller];
@@ -233,6 +244,8 @@ std::string ControlStates()
 			{
 				controllerNames[controller] = controllerName(device, "Controller " + uintToString(controller));
 			}
+			//Add controller to the list.
+			state += "<c id=\"" + uintToString(controller) + "\" name=\"" + controllerNames[controller] + "\">";
 			
 			//Get the input elements from the controller.
 			elements = IOHIDDeviceCopyMatchingElements(device, NULL, kIOHIDOptionsTypeNone);
@@ -245,24 +258,70 @@ std::string ControlStates()
 				element = (IOHIDElementRef)CFArrayGetValueAtIndex(elements, elementIndex);
 				//Get the type of element.
 				type = IOHIDElementGetType(element);
+				
 				//Check the type, axes are more likely to be a Misc than an Axis for some reason.
-				switch(type)
+				if(type == kIOHIDElementTypeInput_Misc || type == kIOHIDElementTypeInput_Axis)
 				{
-					case kIOHIDElementTypeInput_Misc:
-					case kIOHIDElementTypeInput_Axis:
-						//TODO: Axis reading code.
-					break;
-					case kIOHIDElementTypeInput_Button:
-						//TODO: Button reading code.
-					break;
-					default:
-					break;
+					//Read the value fron the element of the device.
+					IOHIDDeviceGetValue(device, element, &value);
+					
+					//Workaround for a supposed bug where this value is impossibly high.
+					if(IOHIDValueGetLength(value) > 4)
+					{
+						continue;
+					}
+					
+					CFIndex integerValue;
+					
+					//Get the value from the controller element.
+					integerValue = IOHIDValueGetIntegerValue(value);
+					
+					//Check if POV element, which are 2 axes in one.
+					if(IOHIDElementGetUsage(element) == kHIDUsage_GD_Hatswitch)
+					{
+						//Workaround for POV hat switches that do not have null states.
+						if(!IOHIDElementHasNullState(element))
+						{
+							CFIndex logicalMin,
+								logicalMax;
+							
+							//Get the minimum and maximum values.
+							logicalMin = IOHIDElementGetLogicalMin(element);
+							logicalMax = IOHIDElementGetLogicalMax(element);
+							
+							integerValue = integerValue < logicalMin ? logicalMax - logicalMin + 1 : integerValue - 1;
+						}
+						
+						//TODO: POV STATES
+						axesStates += "<d p=\"" + axesNames[povNamesIndex >= axesNamesLength ? axesNamesLength-1 : povNamesIndex++] + "\">" + "</d>";
+						axesStates += "<d p=\"" + axesNames[povNamesIndex >= axesNamesLength ? axesNamesLength-1 : povNamesIndex++] + "\">" + "</d>";
+					}
+					else
+					{
+						float floatValue;
+						CFIndex logicalMin,
+							logicalMax;
+						
+						//Get the minimum and maximum values.
+						logicalMin = IOHIDElementGetLogicalMin(element);
+						logicalMax = IOHIDElementGetLogicalMax(element);
+						
+						//Calculate the -1 to 1 float from the min and max possible values.
+						floatValue = (integerValue - logicalMin) / (float) (logicalMax - logicalMin) * 2.0f - 1.0f;
+						
+						axesStates += "<d a=\"" + axesNames[axesNamesIndex >= axesNamesLength ? axesNamesLength-1 : axesNamesIndex++] + "\">" + floatToString(floatValue) + "</d>";
+					}
+				}
+				else if(type == kIOHIDElementTypeInput_Button)
+				{
+					//Read the value fron the element of the device.
+					IOHIDDeviceGetValue(device, element, &value);
+					buttonStates += IOHIDValueGetIntegerValue(value) ? "1" : "0";
 				}
 			}
+			state += "<a>" + axesStates + "</a><b>" + buttonStates + "</b></c>";
 			//Free the elements.
 			CFRelease(elements);
-			
-			std::cout << controllerNames[controller] << "\n";
 		}
 	}
 	
