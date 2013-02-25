@@ -33,10 +33,10 @@ freely, subject to the following restrictions:
 #include <mach/mach.h>
 #include <mach/mach_time.h>
 
-//Set the total supported controller ID's (16 usually).
+//Keep track of total controllers.
 static unsigned int controllers = 0;
 //Vector of cached controller names read from the registry.
-static std::vector<std::string> controllerNames;//(controllers);
+static std::vector<std::string> controllerNames;
 //The HID manager.
 static IOHIDManagerRef hidManager = NULL;
 //The devices to match againts.
