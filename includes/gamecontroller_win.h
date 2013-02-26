@@ -190,9 +190,9 @@ std::string ControlStates()
 			//Add controller to the list.
 			state += "<c id=\"" + uintToString(controllerID) + "\" name=\"" + controllerNames[controllerID] + "\"><a>";
 
-			//Calculate the current axis position from either extremity on a range or -1 - 1 (((cur - min) / (max - min) * 2) - 1) Y is reversed. X is always 0, Y is always 1.
+			//Calculate the current axis position from either extremity on a range or -1 - 1 (((cur - min) / (max - min) * 2) - 1). X is always 0, Y is always 1.
 			state += "<d a=\"x\">" + floatToString(((float)(joyinfo.dwXpos - joycaps.wXmin) / (float)(joycaps.wXmax - joycaps.wXmin) * 2) - 1) + "</d>" +
-				"<d a=\"y\">" + floatToString(((float)(joyinfo.dwYpos - joycaps.wYmin) / (float)(joycaps.wYmax - joycaps.wYmin) * -2) + 1) + "</d>";
+				"<d a=\"y\">" + floatToString(((float)(joyinfo.dwYpos - joycaps.wYmin) / (float)(joycaps.wYmax - joycaps.wYmin) * 2) - 1) + "</d>";
 
 			//Add as many other axes as exist.
 			if(joycaps.wCaps & JOYCAPS_HASZ)
