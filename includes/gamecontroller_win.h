@@ -41,14 +41,6 @@ static std::string uintToString(unsigned int i)
 	return ss.str();
 }
 
-//Converts int to string.
-static std::string intToString(int i)
-{
-	std::stringstream ss;
-	ss << i;
-	return ss.str();
-}
-
 //Converts float to string.
 static std::string floatToString(float i)
 {
