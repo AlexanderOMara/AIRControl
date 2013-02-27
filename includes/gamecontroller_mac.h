@@ -27,7 +27,6 @@ freely, subject to the following restrictions:
 #include <sstream>
 #include <vector>
 #include <IOKit/hid/IOHIDLib.h>
-#include <iostream>//TODO: Remove this.
 
 #include <limits.h>
 #include <mach/mach.h>
@@ -49,14 +48,6 @@ static unsigned int povNamesIndex = 0;
 
 //Converts uint to string.
 static std::string uintToString(unsigned int i)
-{
-	std::stringstream ss;
-	ss << i;
-	return ss.str();
-}
-
-//Converts int to string.
-static std::string intToString(int i)
 {
 	std::stringstream ss;
 	ss << i;
@@ -94,6 +85,7 @@ static std::string controllerName(IOHIDDeviceRef device, std::string fallbackNam
 	
 	//Get the reference to the name.
 	productKey = (CFStringRef)IOHIDDeviceGetProperty(device, CFSTR(kIOHIDProductKey));
+	
 	//Check the reference.
 	if(productKey == NULL || CFGetTypeID(productKey) != CFStringGetTypeID())
 	{
@@ -128,6 +120,7 @@ static std::string controllerName(IOHIDDeviceRef device, std::string fallbackNam
 std::string ControlStates()
 {
 	std::string state;
+	CFSetRef devices;
 	
 	//The string we will output the states as.
 	state = "<r>";
@@ -196,14 +189,17 @@ std::string ControlStates()
 	IOHIDManagerSetDeviceMatchingMultiple(hidManager, deviceMatch);
 	
 	//Copy out devices.
-	CFSetRef devices = IOHIDManagerCopyDevices(hidManager);
+	devices = IOHIDManagerCopyDevices(hidManager);
 	
 	//Make sure devices match.
 	if(devices != NULL)
 	{
-		//How many devices?
 		CFIndex controller,
-			deviceCount = CFSetGetCount(devices);
+			deviceCount;
+		IOHIDDeviceRef * deviceRefs;
+		
+		//Get the devices count.
+		deviceCount = CFSetGetCount(devices);
 		
 		//Check if the controllers have changed, erase the name cache if they have.
 		if(controllers != deviceCount)
@@ -213,7 +209,7 @@ std::string ControlStates()
 		}
 		
 		//Memory to extract device refs to.
-		IOHIDDeviceRef * deviceRefs = (IOHIDDeviceRef*)malloc(sizeof(IOHIDDeviceRef) * deviceCount);
+		deviceRefs = (IOHIDDeviceRef*)malloc(sizeof(IOHIDDeviceRef) * deviceCount);
 		
 		//Extract device refs.
 		CFSetGetValues(devices, (const void **)deviceRefs);
@@ -271,7 +267,13 @@ std::string ControlStates()
 						continue;
 					}
 					
-					CFIndex integerValue;
+					CFIndex integerValue,
+						logicalMin,
+						logicalMax;
+					
+					//Get the minimum and maximum values.
+					logicalMin = IOHIDElementGetLogicalMin(element);
+					logicalMax = IOHIDElementGetLogicalMax(element);
 					
 					//Get the value from the controller element.
 					integerValue = IOHIDValueGetIntegerValue(value);
@@ -282,29 +284,61 @@ std::string ControlStates()
 						//Workaround for POV hat switches that do not have null states.
 						if(!IOHIDElementHasNullState(element))
 						{
-							CFIndex logicalMin,
-								logicalMax;
-							
-							//Get the minimum and maximum values.
-							logicalMin = IOHIDElementGetLogicalMin(element);
-							logicalMax = IOHIDElementGetLogicalMax(element);
-							
 							integerValue = integerValue < logicalMin ? logicalMax - logicalMin + 1 : integerValue - 1;
 						}
 						
-						//TODO: POV STATES
-						axesStates += "<d p=\"" + axesNames[povNamesIndex >= axesNamesLength ? axesNamesLength-1 : povNamesIndex++] + "\">" + "</d>";
-						axesStates += "<d p=\"" + axesNames[povNamesIndex >= axesNamesLength ? axesNamesLength-1 : povNamesIndex++] + "\">" + "</d>";
+						CFIndex range;
+						std::string povx,
+							povy;
+						
+						range = logicalMax - logicalMin + 1;
+						
+						povx = "0";
+						povy = "0";
+						
+						//Convert the value to 2 axes.
+						switch(integerValue)
+						{
+							case 0:
+								povy = "-1";
+								povx = "0";
+							break;
+							case 1:
+								povy = "-1";
+								povx = "1";
+							break;
+							case 2:
+								povy = "0";
+								povx = "1";
+							break;
+							case 3:
+								povy = "1";
+								povx = "1";
+							break;
+							case 4:
+								povy = "1";
+								povx = "0";
+							break;
+							case 5:
+								povy = "1";
+								povx = "-1";
+							break;
+							case 6:
+								povy = "0";
+								povx = "-1";
+							break;
+							case 7:
+								povy = "-1";
+								povx = "-1";
+							break;
+						}
+						
+						axesStates += "<d p=\"" + axesNames[povNamesIndex >= axesNamesLength ? axesNamesLength-1 : povNamesIndex++] + "\">" + povx + "</d>" +
+							"<d p=\"" + axesNames[povNamesIndex >= axesNamesLength ? axesNamesLength-1 : povNamesIndex++] + "\">" + povy + "</d>";
 					}
 					else
 					{
 						float floatValue;
-						CFIndex logicalMin,
-							logicalMax;
-						
-						//Get the minimum and maximum values.
-						logicalMin = IOHIDElementGetLogicalMin(element);
-						logicalMax = IOHIDElementGetLogicalMax(element);
 						
 						//Calculate the -1 to 1 float from the min and max possible values.
 						floatValue = (integerValue - logicalMin) / (float) (logicalMax - logicalMin) * 2.0f - 1.0f;
@@ -316,10 +350,13 @@ std::string ControlStates()
 				{
 					//Read the value fron the element of the device.
 					IOHIDDeviceGetValue(device, element, &value);
+					
 					buttonStates += IOHIDValueGetIntegerValue(value) ? "1" : "0";
 				}
 			}
+			
 			state += "<a>" + axesStates + "</a><b>" + buttonStates + "</b></c>";
+			
 			//Free the elements.
 			CFRelease(elements);
 		}

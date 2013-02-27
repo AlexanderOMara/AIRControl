@@ -211,17 +211,17 @@ std::string ControlStates()
 			{
 				state += "<d a=\"v\">" + floatToString(((float)(joyinfo.dwVpos - joycaps.wVmin) / (float)(joycaps.wVmax - joycaps.wVmin) * 2) - 1) + "</d>";
 			}
-			//POV axes (these are also reversed).
+
+			//POV axes.
 			if(joycaps.wCaps & JOYCAPS_HASPOV)
 			{
-				std::string povx;
-				std::string povy;
-				if(joyinfo.dwPOV == JOY_POVCENTERED)
-				{
+				std::string povx,
+					povy;
+
 					povx = "0";
 					povy = "0";
-				}
-				else
+
+				if(joyinfo.dwPOV != JOY_POVCENTERED)
 				{
 					if(joyinfo.dwPOV > JOY_POVFORWARD && joyinfo.dwPOV < JOY_POVBACKWARD)
 					{
@@ -231,22 +231,14 @@ std::string ControlStates()
 					{
 						povx = "-1";
 					}
-					else
-					{
-						povx = "0";
-					}
 
 					if(joyinfo.dwPOV > JOY_POVLEFT || joyinfo.dwPOV < JOY_POVRIGHT)
 					{
-						povy = "1";
+						povy = "-1";
 					}
 					else if(joyinfo.dwPOV > JOY_POVRIGHT && joyinfo.dwPOV < JOY_POVLEFT)
 					{
-						povy = "-1";
-					}
-					else
-					{
-						povy = "0";
+						povy = "1";
 					}
 				}
 				state += "<d p=\"x\">" + povx + "</d><d p=\"y\">" + povy + "</d>";
