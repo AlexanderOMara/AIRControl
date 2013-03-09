@@ -121,6 +121,7 @@ static std::string controllerName(unsigned int controllerID, JOYCAPS joycaps, st
 				if(regSuccess == ERROR_SUCCESS)
 				{
 					//Read the key data into the description.
+					free(productKey);
 					productKey = (char*)malloc(keyNameSizeOf);
 					regSuccess = RegQueryValueEx(currentKey, REGSTR_VAL_JOYOEMNAME, NULL, NULL, (LPBYTE) productKey, &keyNameSizeOf);
 				}
