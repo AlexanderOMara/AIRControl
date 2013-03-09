@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2012-2013 Alexander O'Mara alexomara.com
+Copyright (C) 2012-2013 Alexander O'Mara alexomara.com
 
 This software is provided 'as-is', without any express or implied
 warranty. In no event will the authors be held liable for any damages
