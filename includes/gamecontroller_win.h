@@ -68,7 +68,7 @@ static std::string replaceQuotes(std::string str)
 static std::string controllerName(unsigned int controllerID, JOYCAPS joycaps, std::string fallbackName)
 {
 	//Descrition of the controller.
-	char * productKey;
+	char *productKey = (char*)malloc(0);
 	//Registry key path.
 	char subkey[256];
 	//Registry keys.
@@ -137,10 +137,10 @@ static std::string controllerName(unsigned int controllerID, JOYCAPS joycaps, st
 						controllerDescription = fallbackName;
 					}
 				}
-				free(productKey);
 			}
 		}
 	}
+	free(productKey);
 
 	//Fallback controller name.
 	return controllerDescription;
