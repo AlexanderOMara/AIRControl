@@ -354,9 +354,11 @@ std::string ControlStates()
 			
 			state += "<a>" + axesStates + "</a><b>" + buttonStates + "</b></c>";
 			
-			//Free the elements.
+			//Free memory.
+			free(deviceRefs);
 			CFRelease(elements);
 		}
+		CFRelease(devices);
 	}
 	
 	//Finish the string and return.

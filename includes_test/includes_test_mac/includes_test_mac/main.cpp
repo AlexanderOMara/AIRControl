@@ -8,7 +8,7 @@ int main()
 	while(true)
 	{
 		cout << ControlStates() << endl;
-		sleep(1/60);
+		usleep(1000/60);
 	}
     return 0;
 }
