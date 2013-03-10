@@ -28,9 +28,6 @@ freely, subject to the following restrictions:
 #include <vector>
 #include <IOKit/hid/IOHIDLib.h>
 
-#include <limits.h>
-#include <mach/mach.h>
-#include <mach/mach_time.h>
 
 //Keep track of total controllers.
 static unsigned int controllers = 0;
