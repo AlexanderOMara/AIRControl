@@ -9,7 +9,7 @@ int main()
 	while(true)
 	{
 		cout << ControlStates() << endl;
-		Sleep(1000);
+		Sleep(1000/60);
 	}
     return 0;
 }
