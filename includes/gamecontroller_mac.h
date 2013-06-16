@@ -21,6 +21,7 @@ freely, subject to the following restrictions:
    distribution.
 */
 
+
 //The following frameworks must be added.
 //IOKit.framework
 //CoreFoundation.framework
@@ -28,20 +29,101 @@ freely, subject to the following restrictions:
 #include <vector>
 #include <IOKit/hid/IOHIDLib.h>
 
+//Data structure for controller axes.
+struct ControlDeviceElementAxis {
+	IOHIDElementRef element;
+	IOHIDElementCookie cookie;
+	CFIndex logicalMin;
+	CFIndex logicalMax;
+	float state;
+};
 
-//Keep track of total controllers.
-static unsigned int controllers = 0;
-//Vector of cached controller names read from the registry.
-static std::vector<std::string> controllerNames;
+//Data structure for controller POVs.
+struct ControlDeviceElementPOV {
+	IOHIDElementRef element;
+	IOHIDElementCookie cookie;
+	CFIndex logicalMin;
+	CFIndex logicalMax;
+	bool hasNullState;
+	int state;
+};
+
+//Data structure for controller axes.
+struct ControlDeviceElementButton {
+	IOHIDElementRef element;
+	IOHIDElementCookie cookie;
+	bool state;
+};
+
+//Data structure for controllers.
+struct ControlDevice {
+	IOHIDDeviceRef device;
+	std::string * name;
+	int vendorID;
+	std::string * vendorIDstr;
+	int productID;
+	std::string * productIDstr;
+	std::string * axesLetters;
+	std::vector<ControlDeviceElementAxis *> * elementsAxes;
+	std::vector<ControlDeviceElementPOV *> * elementsPOV;
+	std::vector<ControlDeviceElementButton *> * elementsButton;
+	unsigned int elementsAxesCount;
+	unsigned int elementsPOVCount;
+	unsigned int elementsButtonCount;
+	ControlDevice()
+	{
+		device = NULL;
+		name = new std::string();
+		vendorID = 0;
+		vendorIDstr = new std::string();
+		productID = 0;
+		productIDstr = new std::string();
+		axesLetters = new std::string();
+		elementsAxes = new std::vector<ControlDeviceElementAxis *>();
+		elementsPOV = new std::vector<ControlDeviceElementPOV *>();
+		elementsButton = new std::vector<ControlDeviceElementButton *>();
+		elementsAxesCount = 0;
+		elementsPOVCount = 0;
+		elementsButtonCount = 0;
+	}
+	~ControlDevice()
+	{
+		unsigned int elementIndex;
+		
+		//Dispose of all the elements.
+		for(elementIndex = 0; elementIndex < elementsAxesCount; elementIndex++)
+		{
+			delete elementsAxes->at(elementIndex);
+		}
+		elementsAxes->clear();
+		for(elementIndex = 0; elementIndex < elementsPOVCount; elementIndex++)
+		{
+			delete elementsPOV->at(elementIndex);
+		}
+		elementsPOV->clear();
+		for(elementIndex = 0; elementIndex < elementsButtonCount; elementIndex++)
+		{
+			delete elementsButton->at(elementIndex);
+		}
+		elementsButton->clear();
+		
+		delete name;
+		delete vendorIDstr;
+		delete productIDstr;
+		delete axesLetters;
+		delete elementsAxes;
+		delete elementsPOV;
+		delete elementsButton;
+	}
+};
+
 //The HID manager.
 static IOHIDManagerRef hidManager = NULL;
-//The devices to match againts.
-static CFArrayRef deviceMatch = NULL;
-//The hypothetical axes names and counters to keep track of them.
-static std::string axesNames[] = {"x", "y", "z", "r", "u", "v", "?"};
+//The list of connected devices.
+static std::vector<ControlDevice *> devices;
+//The hypothetical axes names.
+static char axesNames[] = {'X', 'Y', 'Z', 'R', 'U', 'V', '?'};
 static unsigned int axesNamesLength = 7;
-static unsigned int axesNamesIndex = 0;
-static unsigned int povNamesIndex = 0;
 
 //Converts uint to string.
 static std::string uintToString(unsigned int i)
@@ -59,80 +141,299 @@ static std::string floatToString(float i)
 	return ss.str();
 }
 
-//Replaces " with '.
-static std::string replaceQuotes(std::string str)
+//Replaces characters.
+static std::string replaceCharacters(std::string str, char find, char replace)
 {
 	unsigned int i,
-		str_size = str.size();
+		str_size;
+	str_size = str.size();
 	for(i = 0; i < str_size; i++)
 	{
-		if(str[i] == '"')
+		if(str[i] == find)
 		{
-			str[i] = '\'';
+			str[i] = replace;
 		}
 	}
 	return str;
 }
 
-//Returns an XML string of all the game controller states.
-static std::string controllerName(IOHIDDeviceRef device, std::string fallbackName)
+//Reads properties of a device as an integer.
+static int IOHIDDeviceGetPropertyInt(IOHIDDeviceRef deviceRef, CFStringRef key) {
+	CFTypeRef propertyRef;
+	//Get the reference to the property.
+	propertyRef = IOHIDDeviceGetProperty(deviceRef, key);
+	if (propertyRef == NULL || CFGetTypeID(propertyRef) != CFNumberGetTypeID()) {
+		return 0;
+	}
+	int value;
+	//Copy the referenced value into value.
+	CFNumberGetValue((CFNumberRef)propertyRef, kCFNumberSInt32Type, &value);
+	return value;
+}
+
+//Looks up a controller name.
+static std::string controllerName(IOHIDDeviceRef deviceRef, std::string fallbackName)
 {
 	CFStringRef productKey;
-	std::string controllerDescription;
+	std::string controllerName;
 	
 	//Get the reference to the name.
-	productKey = (CFStringRef)IOHIDDeviceGetProperty(device, CFSTR(kIOHIDProductKey));
+	productKey = (CFStringRef)IOHIDDeviceGetProperty(deviceRef, CFSTR(kIOHIDProductKey));
 	
 	//Check the reference.
 	if(productKey == NULL || CFGetTypeID(productKey) != CFStringGetTypeID())
 	{
-		controllerDescription = fallbackName;
+		controllerName = fallbackName;
 	}
 	else
 	{
-		char * controllerName;
+		char * controllerKey;
 		CFIndex length;
-		
 		//Copy the name from the reference into an string.
 		CFStringGetBytes(productKey, CFRangeMake(0, CFStringGetLength(productKey)), kCFStringEncodingUTF8, '?', false, NULL, 100, &length);
-		controllerName = (char *)malloc(length + 1);
-		CFStringGetBytes(productKey, CFRangeMake(0, CFStringGetLength(productKey)), kCFStringEncodingUTF8, '?', false, (UInt8 *) controllerName, length + 1, NULL);
+		controllerKey = (char *)malloc(length + 1);
+		CFStringGetBytes(productKey, CFRangeMake(0, CFStringGetLength(productKey)), kCFStringEncodingUTF8, '?', false, (UInt8 *)controllerKey, length + 1, NULL);
 		//Null terminate the string.
-		controllerName[length] = '\x00';
+		controllerKey[length] = '\x00';
 		//Set it and free it.
-		controllerDescription = replaceQuotes(controllerName);
-		free(controllerName);
+		controllerName = controllerKey;
+		free(controllerKey);
 	}
 	
 	//If the name is still blank, use the fallback.
-	if(controllerDescription == "")
+	if(controllerName == "")
 	{
-		controllerDescription = fallbackName;
+		controllerName = fallbackName;
 	}
 	
-	return controllerDescription;
+	return controllerName;
 }
 
-//Returns an XML string of all the game controller states.
-std::string ControlStates()
+static void deviceValueChanged(void * context, IOReturn result, void * sender, IOHIDValueRef valueRef)
 {
-	std::string state;
-	CFSetRef devices;
+	ControlDevice * device;
+	IOHIDElementRef element;
+	IOHIDElementCookie cookie;
+	IOHIDElementType type;
+	unsigned int elementIndex;
+		
+	//Get information on the device and element changed.
+	device = (ControlDevice *)context;
+	element = IOHIDValueGetElement(valueRef);
+	cookie = IOHIDElementGetCookie(element);
+	type = IOHIDElementGetType(element);
 	
-	//The string we will output the states as.
-	state = "<r>";
+	//Check the type of element changed and update the current value.
+	switch(type)
+	{
+		case kIOHIDElementTypeInput_Button:
+		{
+			ControlDeviceElementButton * elementButton;
+			for(elementIndex = 0; elementIndex < device->elementsButtonCount; elementIndex++)
+			{
+				elementButton = device->elementsButton->at(elementIndex);
+				//Check element identifier for a match.
+				if(cookie == elementButton->cookie)
+				{
+					elementButton->state = IOHIDValueGetIntegerValue(valueRef);
+					break;
+				}
+			}
+		}
+		break;
+		case kIOHIDElementTypeInput_Misc:
+		case kIOHIDElementTypeInput_Axis:
+		{
+			//Workaround for a supposed bug where this value is impossibly high.
+			if(IOHIDValueGetLength(valueRef) > 4)
+			{
+				return;
+			}
+			
+			int value = IOHIDValueGetIntegerValue(valueRef);
+			
+			//Check if POV element.
+			if(IOHIDElementGetUsage(element) == kHIDUsage_GD_Hatswitch)
+			{
+				ControlDeviceElementPOV * elementPOV;
+				for(elementIndex = 0; elementIndex < device->elementsPOVCount; elementIndex++)
+				{
+					elementPOV = device->elementsPOV->at(elementIndex);
+					//Check element identifier for a match.
+					if(cookie == elementPOV->cookie)
+					{
+						//Workaround for POV hat switches that do not have null states.
+						if(!elementPOV->hasNullState)
+						{
+							value = value < elementPOV->logicalMin ? elementPOV->logicalMax - elementPOV->logicalMin + 1 : value - 1;
+						}
+						elementPOV->state = value;
+						break;
+					}
+				}
+			}
+			else
+			{
+				ControlDeviceElementAxis * elementAxis;
+				for(elementIndex = 0; elementIndex < device->elementsAxesCount; elementIndex++)
+				{
+					elementAxis = device->elementsAxes->at(elementIndex);
+					//Check element identifier for a match.
+					if(cookie == elementAxis->cookie)
+					{
+						//Sanity check.
+						if(value < elementAxis->logicalMin)
+						{
+							value = elementAxis->logicalMin;
+						}
+						if(value > elementAxis->logicalMax)
+						{
+							value = elementAxis->logicalMax;
+						}
+						//Calculate the -1 to 1 float from the min and max possible values.
+						elementAxis->state = (value - elementAxis->logicalMin) / (float)(elementAxis->logicalMax - elementAxis->logicalMin) * 2.0f - 1.0f;
+						break;
+					}
+				}
+			}
+		}
+		break;
+		default:
+		break;
+	}
+}
+
+//Callback for a matching device being attached.
+static void deviceMatchingCallback(void * context, IOReturn result, void * sender, IOHIDDeviceRef deviceRef)
+{
+	CFArrayRef elements;
+	CFIndex elementIndex,
+		elementCount;
 	
-	//If this is the first run, create the hidManager and the deviceMatch.
+	//Create a device object to store information on the device.
+	ControlDevice * device = new ControlDevice();
+	device->device = deviceRef;
+	device->vendorID = IOHIDDeviceGetPropertyInt(deviceRef, CFSTR(kIOHIDVendorIDKey));
+	device->vendorIDstr->assign(uintToString(device->vendorID));
+	device->productID = IOHIDDeviceGetPropertyInt(deviceRef, CFSTR(kIOHIDProductIDKey));
+	device->productIDstr->assign(uintToString(device->productID));
+	device->name->assign(replaceCharacters(controllerName(deviceRef, ""), '|', ' '));
+	
+	//Get the input elements from the controller.
+	elements = IOHIDDeviceCopyMatchingElements(deviceRef, NULL, kIOHIDOptionsTypeNone);
+	elementCount = CFArrayGetCount(elements);
+	
+	//Loop over the elements.
+	for(elementIndex = 0; elementIndex < elementCount; elementIndex++)
+	{
+		IOHIDElementRef element;
+		IOHIDElementType type;
+		
+		//Get the current element.
+		element = (IOHIDElementRef)CFArrayGetValueAtIndex(elements, elementIndex);
+		//Get the type of element.
+		type = IOHIDElementGetType(element);
+		
+		//Check the type, axes are more likely to be a Misc than an Axis for some reason.
+		switch(type)
+		{
+			case kIOHIDElementTypeInput_Button:
+			{
+				ControlDeviceElementButton * buttonElement = new ControlDeviceElementButton();
+				buttonElement->element = element;
+				buttonElement->cookie = IOHIDElementGetCookie(element);
+				
+				device->elementsButton->push_back(buttonElement);
+			}
+			break;
+			case kIOHIDElementTypeInput_Misc:
+			case kIOHIDElementTypeInput_Axis:
+			{
+				//Check if POV element.
+				if(IOHIDElementGetUsage(element) == kHIDUsage_GD_Hatswitch)
+				{
+					ControlDeviceElementPOV * povElement = new ControlDeviceElementPOV();
+					povElement->element = element;
+					povElement->cookie = IOHIDElementGetCookie(element);
+					povElement->logicalMin = IOHIDElementGetLogicalMin(element);
+					povElement->logicalMax = IOHIDElementGetLogicalMax(element);
+					povElement->hasNullState = !!IOHIDElementHasNullState(element);
+
+					device->elementsPOV->push_back(povElement);
+				}
+				else
+				{
+					ControlDeviceElementAxis * axisElement = new ControlDeviceElementAxis();
+					axisElement->element = element;
+					axisElement->cookie = IOHIDElementGetCookie(element);
+					axisElement->logicalMin = IOHIDElementGetLogicalMin(element);
+					axisElement->logicalMax = IOHIDElementGetLogicalMax(element);
+					
+					//Add the axis letter.
+					device->axesLetters->push_back(axesNames[device->elementsAxes->size() < axesNamesLength ? device->elementsAxes->size() : axesNamesLength-1]);
+					
+					device->elementsAxes->push_back(axisElement);
+				}
+			}
+			break;
+			default:
+			break;
+		}
+	}
+	//Free memory.
+	CFRelease(elements);
+	
+	//Cache the element counts.
+	device->elementsAxesCount = device->elementsAxes->size();
+	device->elementsPOVCount = device->elementsPOV->size();
+	device->elementsButtonCount = device->elementsButton->size();
+	
+	//Add to the list of devices.
+	devices.push_back(device);
+	
+	//Register input callbacks on the device, passing a pointer to the device in the callback.
+	IOHIDDeviceRegisterInputValueCallback(deviceRef, deviceValueChanged, device);
+}
+
+//Callback for a matching device being removed.
+static void deviceRemovalCallback(void * context, IOReturn result, void * sender, IOHIDDeviceRef deviceRef)
+{
+	unsigned int devicesCount,
+		devicesIndex;
+	
+	//Loop over the devices.
+	devicesCount = devices.size();
+	for(devicesIndex = 0; devicesIndex < devicesCount; devicesIndex++)
+	{
+		//Check if this device is the one that was removed.
+		if(devices.at(devicesIndex)->device == deviceRef)
+		{
+			//Dispose of the device.
+			IOHIDDeviceRegisterInputValueCallback(devices.at(devicesIndex)->device, NULL, NULL);
+			delete devices.at(devicesIndex);
+			devices.erase(devices.begin()+devicesIndex);
+			break;
+		}
+	}
+}
+
+void ControlInit()
+{
+	//Initialize the HID manager, but only if not yet created.
 	if(hidManager == NULL)
 	{
 		CFStringRef keys[2];
-		int value;
 		CFNumberRef values[2];
 		CFDictionaryRef dictionaries[3];
-		//CFArrayRef array;
+		CFArrayRef deviceMatch;
+		int value;
 		
-		//Create HID Manager reference with default selector and blank options.
+		//Create HID manager reference with default selector and blank options.
 		hidManager = IOHIDManagerCreate(kCFAllocatorDefault, kIOHIDOptionsTypeNone);
+		//Open the HID manager.
+		IOHIDManagerOpen(hidManager, kIOHIDOptionsTypeNone);
+		//Attach the HID manager to the current run loop.
+		IOHIDManagerScheduleWithRunLoop(hidManager, CFRunLoopGetCurrent(), kCFRunLoopDefaultMode);
 		
 		//Create keys.
 		keys[0] = CFSTR(kIOHIDDeviceUsagePageKey);
@@ -144,7 +445,7 @@ std::string ControlStates()
 		value = kHIDUsage_GD_Joystick;
 		values[1] = CFNumberCreate(kCFAllocatorDefault, kCFNumberSInt32Type, &value);
 		//Add the joystick dictionary to the list of dictionaries.
-		dictionaries[0] = CFDictionaryCreate(kCFAllocatorDefault, (const void **) keys, (const void **) values, 2, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+		dictionaries[0] = CFDictionaryCreate(kCFAllocatorDefault, (const void **)keys, (const void **) values, 2, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
 		//Free the joystick values.
 		CFRelease(values[0]);
 		CFRelease(values[1]);
@@ -155,7 +456,7 @@ std::string ControlStates()
 		value = kHIDUsage_GD_GamePad;
 		values[1] = CFNumberCreate(kCFAllocatorDefault, kCFNumberSInt32Type, &value);
 		//Add the gamepad dictionary to the list of dictionaries.
-		dictionaries[1] = CFDictionaryCreate(kCFAllocatorDefault, (const void **) keys, (const void **) values, 2, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+		dictionaries[1] = CFDictionaryCreate(kCFAllocatorDefault, (const void **)keys, (const void **) values, 2, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
 		//Free the gamepad values.
 		CFRelease(values[0]);
 		CFRelease(values[1]);
@@ -166,202 +467,155 @@ std::string ControlStates()
 		value = kHIDUsage_GD_MultiAxisController;
 		values[1] = CFNumberCreate(kCFAllocatorDefault, kCFNumberSInt32Type, &value);
 		//Add the multi-axis controller dictionary to the list of dictionaries.
-		dictionaries[2] = CFDictionaryCreate(kCFAllocatorDefault, (const void **) keys, (const void **) values, 2, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+		dictionaries[2] = CFDictionaryCreate(kCFAllocatorDefault, (const void **)keys, (const void **) values, 2, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
 		//Free the multi-axis controller values.
 		CFRelease(values[0]);
 		CFRelease(values[1]);
 		
 		//Create CFArrayRef from the dictionaries.
-		deviceMatch = CFArrayCreate(kCFAllocatorDefault, (const void **) dictionaries, 3, &kCFTypeArrayCallBacks);
+		deviceMatch = CFArrayCreate(kCFAllocatorDefault, (const void **)dictionaries, 3, &kCFTypeArrayCallBacks);
 		//Free the dictionaries.
 		CFRelease(dictionaries[0]);
 		CFRelease(dictionaries[1]);
 		CFRelease(dictionaries[2]);
 		
-		//Open the HID manager reference with blank options (Apple thinks this is necessary, but I'm not so sure).
-		IOHIDManagerOpen(hidManager, kIOHIDOptionsTypeNone);
+		//Set the device matching.
+		IOHIDManagerSetDeviceMatchingMultiple(hidManager, deviceMatch);
+		//Free the device matcher.
+		CFRelease(deviceMatch);
+		
+		//Add event listener for matching device connection/removal.
+		IOHIDManagerRegisterDeviceMatchingCallback(hidManager, deviceMatchingCallback, NULL);
+		IOHIDManagerRegisterDeviceRemovalCallback(hidManager, deviceRemovalCallback, NULL);
 	}
-	
-	//Match HID devices from the matching array.
-	IOHIDManagerSetDeviceMatchingMultiple(hidManager, deviceMatch);
-	
-	//Copy out devices.
-	devices = IOHIDManagerCopyDevices(hidManager);
-	
-	//Make sure devices match.
-	if(devices != NULL)
+}
+
+void ControlTerminate()
+{
+	//Destroy the HID manager if created.
+	if(hidManager != NULL)
 	{
-		CFIndex controller,
-			deviceCount;
-		IOHIDDeviceRef * deviceRefs;
+		unsigned int devicesCount,
+			devicesIndex;
 		
-		//Get the devices count.
-		deviceCount = CFSetGetCount(devices);
-		
-		//Check if the controllers have changed, erase the name cache if they have.
-		if(controllers != deviceCount)
+		//Dispose of the devices.
+		devicesCount = devices.size();
+		for(devicesIndex = 0; devicesIndex < devicesCount; devicesIndex++)
 		{
-			controllerNames = std::vector<std::string>(deviceCount);
-			controllers = deviceCount;
+			IOHIDDeviceRegisterInputValueCallback(devices.at(devicesIndex)->device, NULL, NULL);
+			delete devices.at(devicesIndex);
+		}
+		devices.clear();
+		
+		//Detach the HID manager from the current run loop.
+		IOHIDManagerUnscheduleFromRunLoop(hidManager, CFRunLoopGetCurrent(), kCFRunLoopDefaultMode);
+		//Close the HID manager.
+		IOHIDManagerClose(hidManager, 0);
+		
+		//Free the HID manager.
+		CFRelease(hidManager);
+		hidManager = NULL;
+	}
+}
+
+//Returns a delimited string of all the game controller states.
+std::string ControlStates()
+{
+	//Only output data if properly initialized.
+	if(hidManager == NULL)
+	{
+		return "";
+	}
+	std::string state;
+	unsigned int devicesCount,
+		devicesIndex;
+	
+	//The string we will output the states as.
+	state = "";
+	
+	//Loop over the devices.
+	devicesCount = devices.size();
+	for(devicesIndex = 0; devicesIndex < devicesCount; devicesIndex++)
+	{
+		ControlDevice * device;
+		device = devices.at(devicesIndex);
+		
+		//Delimit multiple controllers.
+		if(devicesIndex)
+		{
+			state += "||";
 		}
 		
-		//Memory to extract device refs to.
-		deviceRefs = (IOHIDDeviceRef*)malloc(sizeof(IOHIDDeviceRef) * deviceCount);
+		state += uintToString(devicesIndex) + '|';
 		
-		//Extract device refs.
-		CFSetGetValues(devices, (const void **)deviceRefs);
+		unsigned int elementCount,
+			elementIndex;
 		
-		//Loop over the devices.
-		for(controller = 0; controller < deviceCount; controller++)
+		//Loop over axes.
+		elementCount = device->elementsAxesCount;
+		for(elementIndex = 0; elementIndex < elementCount; elementIndex++)
 		{
-			IOHIDDeviceRef device;
-			IOHIDElementRef element;
-			IOHIDElementType type;
-			IOHIDValueRef value;
-			CFArrayRef elements;
-			CFIndex elementIndex,
-				elementCount;
-			std::string axesStates,
-				buttonStates;
-			
-			axesStates = "";
-			buttonStates = "";
-			axesNamesIndex = 0;
-			povNamesIndex = 0;
-			
-			//Get the current device.
-			device = deviceRefs[controller];
-			
-			//If the controller name hasn't been set, look it up and cache it.
-			if(controllerNames[controller] == "")
+			if(elementIndex)
 			{
-				controllerNames[controller] = controllerName(device, "Controller " + uintToString(controller));
+				state += ',';
 			}
-			//Add controller to the list.
-			state += "<c id=\"" + uintToString(controller) + "\" name=\"" + controllerNames[controller] + "\">";
-			
-			//Get the input elements from the controller.
-			elements = IOHIDDeviceCopyMatchingElements(device, NULL, kIOHIDOptionsTypeNone);
-			elementCount = CFArrayGetCount(elements);
-			
-			//Loop over the elements.
-			for(elementIndex = 0; elementIndex < elementCount; elementIndex++)
-			{
-				//Get the current element.
-				element = (IOHIDElementRef)CFArrayGetValueAtIndex(elements, elementIndex);
-				//Get the type of element.
-				type = IOHIDElementGetType(element);
-				
-				//Check the type, axes are more likely to be a Misc than an Axis for some reason.
-				if(type == kIOHIDElementTypeInput_Misc || type == kIOHIDElementTypeInput_Axis)
-				{
-					//Read the value fron the element of the device.
-					IOHIDDeviceGetValue(device, element, &value);
-					
-					//Workaround for a supposed bug where this value is impossibly high.
-					if(IOHIDValueGetLength(value) > 4)
-					{
-						continue;
-					}
-					
-					CFIndex integerValue,
-						logicalMin,
-						logicalMax;
-					
-					//Get the minimum and maximum values.
-					logicalMin = IOHIDElementGetLogicalMin(element);
-					logicalMax = IOHIDElementGetLogicalMax(element);
-					
-					//Get the value from the controller element.
-					integerValue = IOHIDValueGetIntegerValue(value);
-					
-					//Check if POV element, which are 2 axes in one.
-					if(IOHIDElementGetUsage(element) == kHIDUsage_GD_Hatswitch)
-					{
-						//Workaround for POV hat switches that do not have null states.
-						if(!IOHIDElementHasNullState(element))
-						{
-							integerValue = integerValue < logicalMin ? logicalMax - logicalMin + 1 : integerValue - 1;
-						}
-						
-						CFIndex range;
-						std::string povx,
-							povy;
-						
-						range = logicalMax - logicalMin + 1;
-						
-						povx = "0";
-						povy = "0";
-						
-						//Convert the value to 2 axes.
-						switch(integerValue)
-						{
-							case 0:
-								povy = "-1";
-								povx = "0";
-							break;
-							case 1:
-								povy = "-1";
-								povx = "1";
-							break;
-							case 2:
-								povy = "0";
-								povx = "1";
-							break;
-							case 3:
-								povy = "1";
-								povx = "1";
-							break;
-							case 4:
-								povy = "1";
-								povx = "0";
-							break;
-							case 5:
-								povy = "1";
-								povx = "-1";
-							break;
-							case 6:
-								povy = "0";
-								povx = "-1";
-							break;
-							case 7:
-								povy = "-1";
-								povx = "-1";
-							break;
-						}
-						
-						axesStates += "<d p=\"" + axesNames[povNamesIndex >= axesNamesLength ? axesNamesLength-1 : povNamesIndex++] + "\">" + povx + "</d>" +
-							"<d p=\"" + axesNames[povNamesIndex >= axesNamesLength ? axesNamesLength-1 : povNamesIndex++] + "\">" + povy + "</d>";
-					}
-					else
-					{
-						float floatValue;
-						
-						//Calculate the -1 to 1 float from the min and max possible values.
-						floatValue = (integerValue - logicalMin) / (float) (logicalMax - logicalMin) * 2.0f - 1.0f;
-						
-						axesStates += "<d a=\"" + axesNames[axesNamesIndex >= axesNamesLength ? axesNamesLength-1 : axesNamesIndex++] + "\">" + floatToString(floatValue) + "</d>";
-					}
-				}
-				else if(type == kIOHIDElementTypeInput_Button)
-				{
-					//Read the value fron the element of the device.
-					IOHIDDeviceGetValue(device, element, &value);
-					
-					buttonStates += IOHIDValueGetIntegerValue(value) ? "1" : "0";
-				}
-			}
-			
-			state += "<a>" + axesStates + "</a><b>" + buttonStates + "</b></c>";
-			
-			//Free memory.
-			free(deviceRefs);
-			CFRelease(elements);
+			state += floatToString(device->elementsAxes->at(elementIndex)->state);
 		}
-		CFRelease(devices);
+		state += '|';
+		
+		//Loop over POVs.
+		elementCount = device->elementsPOVCount;
+		for(elementIndex = 0; elementIndex < elementCount; elementIndex++)
+		{
+			if(elementIndex)
+			{
+				state += ',';
+			}
+			//Convert the value to 2 axes.
+			switch(device->elementsPOV->at(elementIndex)->state)
+			{
+				case 0:
+					state += "0,-1";
+				break;
+				case 1:
+					state += "1,-1";
+				break;
+				case 2:
+					state += "1,0";
+				break;
+				case 3:
+					state += "1,1";
+				break;
+				case 4:
+					state += "0,1";
+				break;
+				case 5:
+					state += "-1,1";
+				break;
+				case 6:
+					state += "-1,0";
+				break;
+				case 7:
+					state += "-1,-1";
+				break;
+				default:
+					state += "0,0";
+				break;
+			}
+		}
+		state += '|';
+		
+		//Loop over buttons.
+		elementCount = device->elementsButtonCount;
+		for(elementIndex = 0; elementIndex < elementCount; elementIndex++)
+		{
+			state += device->elementsButton->at(elementIndex)->state ? '1' : '0';
+		}
+		
+		//Finish the string.
+		state += '|' + *(device->axesLetters) + '|' + *(device->vendorIDstr) + '|' + *(device->productIDstr) + '|' + (device->name->empty() ? "Controller " + uintToString(devicesIndex+1) : *(device->name));
 	}
 	
-	//Finish the string and return.
-	state += "</r>";
+	//Return the state string.
 	return state;
 }

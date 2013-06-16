@@ -23,10 +23,10 @@ freely, subject to the following restrictions:
 
 
 #include <windows.h>
-#include <sstream>
-#include <stdio.h>
-#include <vector>
 #include <regstr.h>
+#include <stdio.h>
+#include <sstream>
+#include <vector>
 
 //Set the total supported controller ID's (16 usually).
 static unsigned int controllers = joyGetNumDevs();
@@ -49,16 +49,16 @@ static std::string floatToString(float i)
 	return ss.str();
 }
 
-//Replaces " with '.
-static std::string replaceQuotes(std::string str)
+//Replaces characters.
+static std::string replaceCharacters(std::string str, char find, char replace)
 {
 	unsigned int i,
 		str_size = str.size();
 	for(i = 0; i < str_size; i++)
 	{
-		if(str[i] == '"')
+		if(str[i] == find)
 		{
-			str[i] = '\'';
+			str[i] = replace;
 		}
 	}
 	return str;
@@ -82,7 +82,7 @@ static std::string controllerName(unsigned int controllerID, JOYCAPS joycaps, st
 	DWORD keyNameSizeOf;
 	std::string controllerDescription;
 
-	//Set it to fallback by default.s
+	//Set it to fallback by default.
 	controllerDescription = fallbackName;
 
 	//Merge the registry path together.
@@ -147,26 +147,27 @@ static std::string controllerName(unsigned int controllerID, JOYCAPS joycaps, st
 	return controllerDescription;
 }
 
-//Returns an XML string of all the game controller states.
+//Returns a delimited string of all the game controller states.
 std::string ControlStates()
 {
-	std::string state;
+	std::string state,
+		axes;
 
 	//For total supported controllers, current ID, and indexing.
 	unsigned int controllerID,
 		controller,
 		controllerButton;
 
-	//Controller types.
-	JOYINFOEX joyinfo;
-	JOYCAPS joycaps;
-
 	//The string we will output the states as.
-	state = "<r>";
+	state = "";
 
 	//Loop through the possible controllers.
 	for(controller = 0; controller < controllers; controller++)
 	{
+		//Controller types.
+		JOYINFOEX joyinfo;
+		JOYCAPS joycaps;
+
 		//Set JOYINFOEX info.
 		joyinfo.dwSize = sizeof(joyinfo);
 		joyinfo.dwFlags = JOY_RETURNALL;
@@ -175,35 +176,36 @@ std::string ControlStates()
 		controllerID = JOYSTICKID1 + controller;
 		if(joyGetPosEx(controllerID, &joyinfo) == JOYERR_NOERROR && joyGetDevCaps(controllerID, &joycaps, sizeof(JOYCAPS)) == JOYERR_NOERROR)
 		{
-			//If the controller name hasn't been set, look it up in the registry and cache it.
-			if(controllerNames[controllerID] == "")
-			{
-				controllerNames[controllerID] = replaceQuotes(controllerName(controllerID, joycaps, joycaps.szPname));
-			}
-			//Add controller to the list.
-			state += "<c id=\"" + uintToString(controllerID) + "\" name=\"" + controllerNames[controllerID] + "\"><a>";
+			//Add controller to the list, delimit if necessary.
+			state += (state.empty() ? "" : "||") + uintToString(controllerID) + '|';
 
 			//Calculate the current axis position from either extremity on a range or -1 - 1 (((cur - min) / (max - min) * 2) - 1). X is always 0, Y is always 1.
-			state += "<d a=\"x\">" + floatToString(((float)(joyinfo.dwXpos - joycaps.wXmin) / (float)(joycaps.wXmax - joycaps.wXmin) * 2) - 1) + "</d>" +
-				"<d a=\"y\">" + floatToString(((float)(joyinfo.dwYpos - joycaps.wYmin) / (float)(joycaps.wYmax - joycaps.wYmin) * 2) - 1) + "</d>";
+			state += floatToString(((float)(joyinfo.dwXpos - joycaps.wXmin) / (float)(joycaps.wXmax - joycaps.wXmin) * 2) - 1) + "," +
+				floatToString(((float)(joyinfo.dwYpos - joycaps.wYmin) / (float)(joycaps.wYmax - joycaps.wYmin) * 2) - 1);
+			axes = "XY";
 
 			//Add as many other axes as exist.
 			if(joycaps.wCaps & JOYCAPS_HASZ)
 			{
-				state += "<d a=\"z\">" + floatToString(((float)(joyinfo.dwZpos - joycaps.wZmin) / (float)(joycaps.wZmax - joycaps.wZmin) * 2) - 1) + "</d>";
+				state += ',' + floatToString(((float)(joyinfo.dwZpos - joycaps.wZmin) / (float)(joycaps.wZmax - joycaps.wZmin) * 2) - 1);
+				axes += 'Z';
 			}
 			if(joycaps.wCaps & JOYCAPS_HASR)
 			{
-				state += "<d a=\"r\">" + floatToString(((float)(joyinfo.dwRpos - joycaps.wRmin) / (float)(joycaps.wRmax - joycaps.wRmin) * 2) - 1) + "</d>";
+				state += ',' + floatToString(((float)(joyinfo.dwRpos - joycaps.wRmin) / (float)(joycaps.wRmax - joycaps.wRmin) * 2) - 1);
+				axes += 'R';
 			}
 			if(joycaps.wCaps & JOYCAPS_HASU)
 			{
-				state += "<d a=\"u\">" + floatToString(((float)(joyinfo.dwUpos - joycaps.wUmin) / (float)(joycaps.wUmax - joycaps.wUmin) * 2) - 1) + "</d>";
+				state += ',' + floatToString(((float)(joyinfo.dwUpos - joycaps.wUmin) / (float)(joycaps.wUmax - joycaps.wUmin) * 2) - 1);
+				axes += 'U';
 			}
 			if(joycaps.wCaps & JOYCAPS_HASV)
 			{
-				state += "<d a=\"v\">" + floatToString(((float)(joyinfo.dwVpos - joycaps.wVmin) / (float)(joycaps.wVmax - joycaps.wVmin) * 2) - 1) + "</d>";
+				state += ',' + floatToString(((float)(joyinfo.dwVpos - joycaps.wVmin) / (float)(joycaps.wVmax - joycaps.wVmin) * 2) - 1);
+				axes += 'V';
 			}
+			state += '|';
 
 			//POV axes.
 			if(joycaps.wCaps & JOYCAPS_HASPOV)
@@ -211,8 +213,8 @@ std::string ControlStates()
 				std::string povx,
 					povy;
 
-					povx = "0";
-					povy = "0";
+				povx = "0";
+				povy = "0";
 
 				if(joyinfo.dwPOV != JOY_POVCENTERED)
 				{
@@ -234,33 +236,30 @@ std::string ControlStates()
 						povy = "1";
 					}
 				}
-				state += "<d p=\"x\">" + povx + "</d><d p=\"y\">" + povy + "</d>";
+				state += povx + ',' + povy;
 			}
-			state += "</a><b>";
+			state += '|';
 
-			//Loop through the total supported joysticks. States are stored in 32 on/off bits.
+			//Loop through the total supported joysticks. Button states are stored in 32 on/off bits.
 			for(controllerButton = 0; controllerButton < joycaps.wNumButtons; controllerButton++)
 			{
 				//Shift the bits to the right to make the last bit the button we want to check, and see if it is on by matching it with 1.
-				if(joyinfo.dwButtons >> controllerButton & 1)
-				{
-					state += "1";
-				}
-				else
-				{
-					state += "0";
-				}
+				state += joyinfo.dwButtons >> controllerButton & 1 ? '1' : '0';
 			}
-			state += "</b></c>";
+			//If the controller name hasn't been set, look it up in the registry and cache it, make sure the name does not contain the string delimiter.
+			if(controllerNames[controllerID].empty())
+			{
+				controllerNames[controllerID] = replaceCharacters(controllerName(controllerID, joycaps, joycaps.szPname), '|', ' ');
+			}
+			state += '|' + axes + '|' + uintToString(joycaps.wMid) + '|' + uintToString(joycaps.wPid) + '|' + controllerNames[controllerID];
 		}
 		else
 		{
 			//The controller has been disconnected, remove it from the cache.
-			controllerNames[controllerID] = "";
+			controllerNames[controllerID].erase();
 		}
 	}
 
-	//Finish the string and return.
-	state += "</r>";
+	//Return the state string.
 	return state;
 }
