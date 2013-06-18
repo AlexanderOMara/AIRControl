@@ -409,7 +409,7 @@ static void deviceRemovalCallback(void * context, IOReturn result, void * sender
 		if(devices.at(devicesIndex)->device == deviceRef)
 		{
 			//Dispose of the device.
-			IOHIDDeviceRegisterInputValueCallback(devices.at(devicesIndex)->device, NULL, NULL);
+			IOHIDDeviceRegisterInputValueCallback(devices.at(devicesIndex)->device, NULL, devices.at(devicesIndex));
 			delete devices.at(devicesIndex);
 			devices.erase(devices.begin()+devicesIndex);
 			break;
@@ -502,7 +502,7 @@ void ControlTerminate()
 		devicesCount = devices.size();
 		for(devicesIndex = 0; devicesIndex < devicesCount; devicesIndex++)
 		{
-			IOHIDDeviceRegisterInputValueCallback(devices.at(devicesIndex)->device, NULL, NULL);
+			IOHIDDeviceRegisterInputValueCallback(devices.at(devicesIndex)->device, NULL, devices.at(devicesIndex));
 			delete devices.at(devicesIndex);
 		}
 		devices.clear();
