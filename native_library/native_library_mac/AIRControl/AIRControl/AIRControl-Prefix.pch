@@ -1,0 +1,7 @@
+//
+// Prefix header for all source files of the 'AIRControl' target in the 'AIRControl' project
+//
+
+#ifdef __OBJC__
+	#import <Cocoa/Cocoa.h>
+#endif

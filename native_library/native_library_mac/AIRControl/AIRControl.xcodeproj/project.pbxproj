@@ -1,0 +1,342 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		AAEBF0F616EB7A7D00774679 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AAEBF0F516EB7A7D00774679 /* Cocoa.framework */; };
+		AAEBF10016EB7A7D00774679 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = AAEBF0FE16EB7A7D00774679 /* InfoPlist.strings */; };
+		AAEBF12316EB806000774679 /* Adobe AIR.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AAEBF12216EB806000774679 /* Adobe AIR.framework */; };
+		AAEBF12616EB811500774679 /* AIRControl.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AAEBF12416EB811500774679 /* AIRControl.cpp */; };
+		AAEBF12716EB811500774679 /* AIRControl.h in Headers */ = {isa = PBXBuildFile; fileRef = AAEBF12516EB811500774679 /* AIRControl.h */; };
+		AAEBF12916EB85F400774679 /* IOKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AAEBF12816EB85F400774679 /* IOKit.framework */; };
+		AAEBF12B16EB860700774679 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AAEBF12A16EB860700774679 /* CoreFoundation.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		AAEBF0F216EB7A7D00774679 /* AIRControl.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = AIRControl.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		AAEBF0F516EB7A7D00774679 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
+		AAEBF0F816EB7A7D00774679 /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
+		AAEBF0F916EB7A7D00774679 /* CoreData.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreData.framework; path = System/Library/Frameworks/CoreData.framework; sourceTree = SDKROOT; };
+		AAEBF0FA16EB7A7D00774679 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		AAEBF0FD16EB7A7D00774679 /* AIRControl-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "AIRControl-Info.plist"; sourceTree = "<group>"; };
+		AAEBF0FF16EB7A7D00774679 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		AAEBF10116EB7A7D00774679 /* AIRControl-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "AIRControl-Prefix.pch"; sourceTree = "<group>"; };
+		AAEBF10B16EB7A7D00774679 /* SenTestingKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SenTestingKit.framework; path = Library/Frameworks/SenTestingKit.framework; sourceTree = DEVELOPER_DIR; };
+		AAEBF12216EB806000774679 /* Adobe AIR.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = "Adobe AIR.framework"; path = "runtimes/air/mac/Adobe AIR.framework"; sourceTree = "<group>"; };
+		AAEBF12416EB811500774679 /* AIRControl.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AIRControl.cpp; sourceTree = "<group>"; };
+		AAEBF12516EB811500774679 /* AIRControl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AIRControl.h; sourceTree = "<group>"; };
+		AAEBF12816EB85F400774679 /* IOKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOKit.framework; path = System/Library/Frameworks/IOKit.framework; sourceTree = SDKROOT; };
+		AAEBF12A16EB860700774679 /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = System/Library/Frameworks/CoreFoundation.framework; sourceTree = SDKROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		AAEBF0EE16EB7A7D00774679 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AAEBF12B16EB860700774679 /* CoreFoundation.framework in Frameworks */,
+				AAEBF12916EB85F400774679 /* IOKit.framework in Frameworks */,
+				AAEBF0F616EB7A7D00774679 /* Cocoa.framework in Frameworks */,
+				AAEBF12316EB806000774679 /* Adobe AIR.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		AAEBF0E816EB7A7D00774679 = {
+			isa = PBXGroup;
+			children = (
+				AAEBF12A16EB860700774679 /* CoreFoundation.framework */,
+				AAEBF12816EB85F400774679 /* IOKit.framework */,
+				AAEBF0FB16EB7A7D00774679 /* AIRControl */,
+				AAEBF0F416EB7A7D00774679 /* Frameworks */,
+				AAEBF0F316EB7A7D00774679 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		AAEBF0F316EB7A7D00774679 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				AAEBF0F216EB7A7D00774679 /* AIRControl.framework */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		AAEBF0F416EB7A7D00774679 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				AAEBF12216EB806000774679 /* Adobe AIR.framework */,
+				AAEBF0F516EB7A7D00774679 /* Cocoa.framework */,
+				AAEBF10B16EB7A7D00774679 /* SenTestingKit.framework */,
+				AAEBF0F716EB7A7D00774679 /* Other Frameworks */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		AAEBF0F716EB7A7D00774679 /* Other Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				AAEBF0F816EB7A7D00774679 /* AppKit.framework */,
+				AAEBF0F916EB7A7D00774679 /* CoreData.framework */,
+				AAEBF0FA16EB7A7D00774679 /* Foundation.framework */,
+			);
+			name = "Other Frameworks";
+			sourceTree = "<group>";
+		};
+		AAEBF0FB16EB7A7D00774679 /* AIRControl */ = {
+			isa = PBXGroup;
+			children = (
+				AAEBF0FC16EB7A7D00774679 /* Supporting Files */,
+				AAEBF12416EB811500774679 /* AIRControl.cpp */,
+				AAEBF12516EB811500774679 /* AIRControl.h */,
+			);
+			path = AIRControl;
+			sourceTree = "<group>";
+		};
+		AAEBF0FC16EB7A7D00774679 /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				AAEBF0FD16EB7A7D00774679 /* AIRControl-Info.plist */,
+				AAEBF0FE16EB7A7D00774679 /* InfoPlist.strings */,
+				AAEBF10116EB7A7D00774679 /* AIRControl-Prefix.pch */,
+			);
+			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXHeadersBuildPhase section */
+		AAEBF0EF16EB7A7D00774679 /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AAEBF12716EB811500774679 /* AIRControl.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXHeadersBuildPhase section */
+
+/* Begin PBXNativeTarget section */
+		AAEBF0F116EB7A7D00774679 /* AIRControl */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AAEBF11C16EB7A7E00774679 /* Build configuration list for PBXNativeTarget "AIRControl" */;
+			buildPhases = (
+				AAEBF0EF16EB7A7D00774679 /* Headers */,
+				AAEBF0F016EB7A7D00774679 /* Resources */,
+				AAEBF0ED16EB7A7D00774679 /* Sources */,
+				AAEBF0EE16EB7A7D00774679 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = AIRControl;
+			productName = AIRControl;
+			productReference = AAEBF0F216EB7A7D00774679 /* AIRControl.framework */;
+			productType = "com.apple.product-type.framework";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		AAEBF0E916EB7A7D00774679 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0460;
+				ORGANIZATIONNAME = "Alexander O'Mara";
+			};
+			buildConfigurationList = AAEBF0EC16EB7A7D00774679 /* Build configuration list for PBXProject "AIRControl" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = AAEBF0E816EB7A7D00774679;
+			productRefGroup = AAEBF0F316EB7A7D00774679 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				AAEBF0F116EB7A7D00774679 /* AIRControl */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		AAEBF0F016EB7A7D00774679 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AAEBF10016EB7A7D00774679 /* InfoPlist.strings in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		AAEBF0ED16EB7A7D00774679 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AAEBF12616EB811500774679 /* AIRControl.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXVariantGroup section */
+		AAEBF0FE16EB7A7D00774679 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				AAEBF0FF16EB7A7D00774679 /* en */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
+/* Begin XCBuildConfiguration section */
+		AAEBF11A16EB7A7E00774679 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.6;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		AAEBF11B16EB7A7E00774679 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.6;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		AAEBF11D16EB7A7E00774679 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_CXX_LIBRARY = "libstdc++";
+				COMBINE_HIDPI_IMAGES = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				FRAMEWORK_SEARCH_PATHS = "\"$(SRCROOT)/runtimes/air/mac\"";
+				FRAMEWORK_VERSION = A;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "AIRControl/AIRControl-Prefix.pch";
+				HEADER_SEARCH_PATHS = "../../../includes/**";
+				INFOPLIST_FILE = "AIRControl/AIRControl-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/../runtimes/air/mac @executable_path/../Frameworks /Library/Frameworks";
+				LIBRARY_SEARCH_PATHS = (
+					"\"$(SRCROOT)/runtimes/air/mac/Adobe\\ AIR.framework/Versions/1.0\"",
+				);
+				OTHER_CFLAGS = "-fvisibility=hidden";
+				OTHER_LDFLAGS = (
+					"-flat_namespace",
+					"-weak_framework",
+					"\"Adobe AIR\"",
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				WRAPPER_EXTENSION = framework;
+			};
+			name = Debug;
+		};
+		AAEBF11E16EB7A7E00774679 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_CXX_LIBRARY = "libstdc++";
+				COMBINE_HIDPI_IMAGES = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				FRAMEWORK_SEARCH_PATHS = "\"$(SRCROOT)/runtimes/air/mac\"";
+				FRAMEWORK_VERSION = A;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "AIRControl/AIRControl-Prefix.pch";
+				HEADER_SEARCH_PATHS = "../../../includes/**";
+				INFOPLIST_FILE = "AIRControl/AIRControl-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/../runtimes/air/mac @executable_path/../Frameworks /Library/Frameworks";
+				LIBRARY_SEARCH_PATHS = (
+					"\"$(SRCROOT)/runtimes/air/mac/Adobe\\ AIR.framework/Versions/1.0\"",
+				);
+				OTHER_CFLAGS = "-fvisibility=hidden";
+				OTHER_LDFLAGS = (
+					"-flat_namespace",
+					"-weak_framework",
+					"\"Adobe AIR\"",
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				WRAPPER_EXTENSION = framework;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		AAEBF0EC16EB7A7D00774679 /* Build configuration list for PBXProject "AIRControl" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AAEBF11A16EB7A7E00774679 /* Debug */,
+				AAEBF11B16EB7A7E00774679 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AAEBF11C16EB7A7E00774679 /* Build configuration list for PBXNativeTarget "AIRControl" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AAEBF11D16EB7A7E00774679 /* Debug */,
+				AAEBF11E16EB7A7E00774679 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = AAEBF0E916EB7A7D00774679 /* Project object */;
+}
