@@ -58,6 +58,8 @@ struct ControlDeviceElementButton {
 //Data structure for controllers.
 struct ControlDevice {
 	IOHIDDeviceRef device;
+	int ID;
+	std::string * IDstr;
 	std::string * name;
 	int vendorID;
 	std::string * vendorIDstr;
@@ -74,6 +76,8 @@ struct ControlDevice {
 	{
 		device = NULL;
 		name = new std::string();
+		ID = 0;
+		IDstr = new std::string();
 		vendorID = 0;
 		vendorIDstr = new std::string();
 		productID = 0;
@@ -107,6 +111,7 @@ struct ControlDevice {
 		}
 		elementsButton->clear();
 		
+		delete IDstr;
 		delete name;
 		delete vendorIDstr;
 		delete productIDstr;
@@ -121,6 +126,8 @@ struct ControlDevice {
 static IOHIDManagerRef hidManager = NULL;
 //The list of connected devices.
 static std::vector<ControlDevice *> devices;
+//Unique identifier counter.
+static unsigned int deviceID = 0;
 //The hypothetical axes names.
 static char axesNames[] = {'X', 'Y', 'Z', 'R', 'U', 'V', '?'};
 static unsigned int axesNamesLength = 7;
@@ -312,6 +319,8 @@ static void deviceMatchingCallback(void * context, IOReturn result, void * sende
 	
 	//Create a device object to store information on the device.
 	ControlDevice * device = new ControlDevice();
+	device->ID = deviceID++;
+	device->IDstr->assign(uintToString(device->ID));
 	device->device = deviceRef;
 	device->vendorID = IOHIDDeviceGetPropertyInt(deviceRef, CFSTR(kIOHIDVendorIDKey));
 	device->vendorIDstr->assign(uintToString(device->vendorID));
@@ -546,7 +555,8 @@ std::string ControlStates()
 			state += "||";
 		}
 		
-		state += uintToString(devicesIndex) + '|';
+		//Add the device.
+		state += *(device->IDstr) + '|';
 		
 		unsigned int elementCount,
 			elementIndex;
