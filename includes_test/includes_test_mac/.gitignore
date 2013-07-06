@@ -1,0 +1,4 @@
+# Xcode generated files #
+#########################
+/DerivedData
+/build/includes_test_mac.build

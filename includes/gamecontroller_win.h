@@ -133,7 +133,7 @@ static std::string controllerName(unsigned int controllerID, JOYCAPS joycaps, st
 				{
 					controllerDescription = productKey;
 					//If the returned value is blank, use the fallback.
-					if(controllerDescription == "")
+					if(controllerDescription.empty())
 					{
 						controllerDescription = fallbackName;
 					}
@@ -177,7 +177,7 @@ std::string ControlStates()
 		if(joyGetPosEx(controllerID, &joyinfo) == JOYERR_NOERROR && joyGetDevCaps(controllerID, &joycaps, sizeof(JOYCAPS)) == JOYERR_NOERROR)
 		{
 			//Add controller to the list, delimit if necessary.
-			state += (state.empty() ? "" : "||") + uintToString(controllerID) + '|';
+			state += (state.empty() ? "" : "\t\t") + uintToString(controllerID) + '\t';
 
 			//Calculate the current axis position from either extremity on a range or -1 - 1 (((cur - min) / (max - min) * 2) - 1). X is always 0, Y is always 1.
 			state += floatToString(((float)(joyinfo.dwXpos - joycaps.wXmin) / (float)(joycaps.wXmax - joycaps.wXmin) * 2) - 1) + "," +
@@ -205,9 +205,9 @@ std::string ControlStates()
 				state += ',' + floatToString(((float)(joyinfo.dwVpos - joycaps.wVmin) / (float)(joycaps.wVmax - joycaps.wVmin) * 2) - 1);
 				axes += 'V';
 			}
-			state += '|';
+			state += '\t';
 
-			//POV axes.
+			//Add the POV axis if available, else put a placeholder.
 			if(joycaps.wCaps & JOYCAPS_HASPOV)
 			{
 				std::string povx,
@@ -238,20 +238,39 @@ std::string ControlStates()
 				}
 				state += povx + ',' + povy;
 			}
-			state += '|';
-
-			//Loop through the total supported joysticks. Button states are stored in 32 on/off bits.
-			for(controllerButton = 0; controllerButton < joycaps.wNumButtons; controllerButton++)
+			else
 			{
-				//Shift the bits to the right to make the last bit the button we want to check, and see if it is on by matching it with 1.
-				state += joyinfo.dwButtons >> controllerButton & 1 ? '1' : '0';
+				state += '_';
 			}
+			state += '\t';
+
+			//Check if this controller has buttons, else put a placeholder.
+			if(joycaps.wNumButtons)
+			{
+				//Loop through the total supported joysticks. Button states are stored in 32 on/off bits.
+				for(controllerButton = 0; controllerButton < joycaps.wNumButtons; controllerButton++)
+				{
+					//Shift the bits to the right to make the last bit the button we want to check, and see if it is on by matching it with 1.
+					state += joyinfo.dwButtons >> controllerButton & 1 ? '1' : '0';
+				}
+			}
+			else
+			{
+				state += '_';
+			}
+
 			//If the controller name hasn't been set, look it up in the registry and cache it, make sure the name does not contain the string delimiter.
 			if(controllerNames[controllerID].empty())
 			{
-				controllerNames[controllerID] = replaceCharacters(controllerName(controllerID, joycaps, joycaps.szPname), '|', ' ');
+				controllerNames[controllerID] = replaceCharacters(controllerName(controllerID, joycaps, joycaps.szPname), '\t', ' ');
+				//If the controller name is still empty, use a default name.
+				if(controllerNames[controllerID].empty())
+				{
+					controllerNames[controllerID] = "Controller " + uintToString(controllerID + 1);
+				}
 			}
-			state += '|' + axes + '|' + uintToString(joycaps.wMid) + '|' + uintToString(joycaps.wPid) + '|' + controllerNames[controllerID];
+			//Finish the state string.
+			state += '\t' + axes + '\t' + uintToString(joycaps.wMid) + '\t' + uintToString(joycaps.wPid) + '\t' + controllerNames[controllerID];
 		}
 		else
 		{

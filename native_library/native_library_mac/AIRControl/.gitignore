@@ -1,0 +1,8 @@
+# Xcode generated files #
+#########################
+/DerivedData
+/build/AIRControl.build
+
+# ADOBE CONFIDENTIAL #
+######################
+/runtimes/air/mac/Adobe AIR.framework

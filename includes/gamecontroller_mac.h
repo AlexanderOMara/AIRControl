@@ -326,7 +326,11 @@ static void deviceMatchingCallback(void * context, IOReturn result, void * sende
 	device->vendorIDstr->assign(uintToString(device->vendorID));
 	device->productID = IOHIDDeviceGetPropertyInt(deviceRef, CFSTR(kIOHIDProductIDKey));
 	device->productIDstr->assign(uintToString(device->productID));
-	device->name->assign(replaceCharacters(controllerName(deviceRef, ""), '|', ' '));
+	device->name->assign(replaceCharacters(controllerName(deviceRef, ""), '\t', ' '));
+	if(device->name->empty())
+	{
+		device->name->assign("Controller " + uintToString(deviceID));
+	}
 	
 	//Get the input elements from the controller.
 	elements = IOHIDDeviceCopyMatchingElements(deviceRef, NULL, kIOHIDOptionsTypeNone);
@@ -552,78 +556,99 @@ std::string ControlStates()
 		//Delimit multiple controllers.
 		if(devicesIndex)
 		{
-			state += "||";
+			state += "\t\t";
 		}
 		
 		//Add the device.
-		state += *(device->IDstr) + '|';
+		state += *(device->IDstr) + '\t';
 		
 		unsigned int elementCount,
 			elementIndex;
 		
-		//Loop over axes.
+		//Loop over axes if available, else add a placeholder.
 		elementCount = device->elementsAxesCount;
-		for(elementIndex = 0; elementIndex < elementCount; elementIndex++)
+		if(elementCount)
 		{
-			if(elementIndex)
+			for(elementIndex = 0; elementIndex < elementCount; elementIndex++)
 			{
-				state += ',';
+				if(elementIndex)
+				{
+					state += ',';
+				}
+				state += floatToString(device->elementsAxes->at(elementIndex)->state);
 			}
-			state += floatToString(device->elementsAxes->at(elementIndex)->state);
 		}
-		state += '|';
+		else
+		{
+			state += '_';
+		}
+		state += '\t';
 		
-		//Loop over POVs.
+		//Loop over POVs if available, else add a placeholder.
 		elementCount = device->elementsPOVCount;
-		for(elementIndex = 0; elementIndex < elementCount; elementIndex++)
+		if(elementCount)
 		{
-			if(elementIndex)
+			for(elementIndex = 0; elementIndex < elementCount; elementIndex++)
 			{
-				state += ',';
-			}
-			//Convert the value to 2 axes.
-			switch(device->elementsPOV->at(elementIndex)->state)
-			{
-				case 0:
-					state += "0,-1";
-				break;
-				case 1:
-					state += "1,-1";
-				break;
-				case 2:
-					state += "1,0";
-				break;
-				case 3:
-					state += "1,1";
-				break;
-				case 4:
-					state += "0,1";
-				break;
-				case 5:
-					state += "-1,1";
-				break;
-				case 6:
-					state += "-1,0";
-				break;
-				case 7:
-					state += "-1,-1";
-				break;
-				default:
-					state += "0,0";
-				break;
+				if(elementIndex)
+				{
+					state += ',';
+				}
+				//Convert the value to 2 axes.
+				switch(device->elementsPOV->at(elementIndex)->state)
+				{
+					case 0:
+						state += "0,-1";
+					break;
+					case 1:
+						state += "1,-1";
+					break;
+					case 2:
+						state += "1,0";
+					break;
+					case 3:
+						state += "1,1";
+					break;
+					case 4:
+						state += "0,1";
+					break;
+					case 5:
+						state += "-1,1";
+					break;
+					case 6:
+						state += "-1,0";
+					break;
+					case 7:
+						state += "-1,-1";
+					break;
+					default:
+						state += "0,0";
+					break;
+				}
 			}
 		}
-		state += '|';
-		
-		//Loop over buttons.
-		elementCount = device->elementsButtonCount;
-		for(elementIndex = 0; elementIndex < elementCount; elementIndex++)
+		else
 		{
-			state += device->elementsButton->at(elementIndex)->state ? '1' : '0';
+			state += '_';
+		}
+		state += '\t';
+		
+		//Loop over buttons oif available, else add a placeholder.
+		elementCount = device->elementsButtonCount;
+		if(elementCount)
+		{
+			for(elementIndex = 0; elementIndex < elementCount; elementIndex++)
+			{
+				state += device->elementsButton->at(elementIndex)->state ? '1' : '0';
+			}
+		}
+		else
+		{
+			state += '_';
 		}
 		
 		//Finish the string.
-		state += '|' + *(device->axesLetters) + '|' + *(device->vendorIDstr) + '|' + *(device->productIDstr) + '|' + (device->name->empty() ? "Controller " + uintToString(devicesIndex+1) : *(device->name));
+		state += '\t' + (device->axesLetters->empty() ? "_" : *(device->axesLetters)) + '\t' + *(device->vendorIDstr) + '\t' + *(device->productIDstr) + '\t' + *(device->name);
 	}
 	
 	//Return the state string.
