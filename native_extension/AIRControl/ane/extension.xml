@@ -1,4 +1,4 @@
-<extension xmlns="http://ns.adobe.com/air/extension/2.5">
+<extension xmlns="http://ns.adobe.com/air/extension/3.1">
 	<id>com.alexomara.ane.AIRControl.AIRControl</id>
 	<versionNumber>1.0.0</versionNumber>
 	<name>AIRControl</name>
