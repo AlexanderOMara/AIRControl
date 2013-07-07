@@ -14,6 +14,18 @@ can be found under `native_extension/AIRControl`.
 Working example can also be found under `examples`.
 
 
+Important Considerations
+------------------------
+
+Giving the user to option to configure the use of every input
+element in your project is important. Every controller is different
+and to avoid frustrated users allowing them to set any axis, POV
+hat switch, or button for any use is recommended. Also note that
+some dual game controllers will register themselves as a single
+game controller, so allowing the user complete flexibility is
+necessary to maximize controller compatibility.
+
+
 Minimum Requirements
 --------------------
 
