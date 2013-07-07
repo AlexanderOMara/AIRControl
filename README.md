@@ -9,9 +9,9 @@ Usage
 
 Everything needed to use this extension including the
 ANE, SWC, AS docs, and full ActionScript source code,
-can be found under `native_extension/AIRControl`
+can be found under `native_extension/AIRControl`.
 
-Working example can also be found under `examples`
+Working example can also be found under `examples`.
 
 
 Minimum Requirements
