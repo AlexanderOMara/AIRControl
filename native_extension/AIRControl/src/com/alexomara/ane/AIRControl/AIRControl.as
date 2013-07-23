@@ -34,6 +34,7 @@ package com.alexomara.ane.AIRControl
 	import flash.events.IEventDispatcher;
 	import flash.external.ExtensionContext;
 	import flash.utils.Dictionary;
+	import flash.utils.getTimer;
 	
 	/**
 	 * Dispatched on controller attach.
@@ -59,11 +60,15 @@ package com.alexomara.ane.AIRControl
 		/**
 		 * The major and minor versions of this extension.
 		 */
-		public static const VERSION:Number = 1.0;
+		public static const VERSION:Number = 1.1;
 		/**
 		 * The revision and build numbers of this extension.
 		 */
 		public static const REVISION:Number = 0.0;
+		/**
+		 * Set to a function that takes a single string argument to get debug output. Set to null to disable.
+		 */
+		public static var debugOutput:Function = null;
 		
 		private static const _eventDispatcher:EventDispatcher = new EventDispatcher();
 		private static const _eventCache:Dictionary = new Dictionary(true);
@@ -92,6 +97,11 @@ package com.alexomara.ane.AIRControl
 		 * <p>Calls the method in the native code to get the current state of the controllers, updates all the controllers, and dispatches events. This function must be called manually every time the application should recieve updated controller information such as on ENTER_FRAME or EXIT_FRAME.</p>
 		 * 
 		 * <p>This function will also create the native extension context on first call and any first calls following the dispose method.</p>
+		 * 
+		 * <ul>
+		 * <li>On Windows checking for new controllers is limited to once per second to avoid performance issues.</li>
+		 * <li>On Mac OS X new controllers are detected immediately.</li>
+		 * </ul>
 		 * 
 		 * @see com.alexomara.ane.AIRControl.events.AIRControlEvent#CONTROLLER_ATTACH
 		 * @see com.alexomara.ane.AIRControl.events.AIRControlEvent#CONTROLLER_DETACH
@@ -126,14 +136,26 @@ package com.alexomara.ane.AIRControl
 			var povPrevX:int;
 			var povPrevY:int;
 			var buttonPrevDown:Boolean;
+			var debugMode:Boolean;
 			//Initialize the extension context if not yet created.
 			if(!_context)
 			{
+				//Output creating extension context.
+				debugOutput && debugOutput("AIRControl[" + getTimer() + "]: Creating extension context.");
 				_context = ExtensionContext.createExtensionContext("com.alexomara.ane.AIRControl.AIRControl", "");
 			}
 			
+			//Remember if calling extension in debug mode even if debugOutput is nulled.
+			debugMode = debugOutput !== null ? true : false;
+			
+			//Output the time before calling extension.
+			debugOutput && debugOutput("AIRControl[" + getTimer() + "]: Calling native function.");
+			
 			//Call the native extension method to get the current controller states.
-			statesString = _context.call("AIRControl") as String;
+			statesString = ( debugMode ? _context.call("AIRControl", true) : _context.call("AIRControl") ) as String;
+			
+			//Output the time completed and raw response.
+			debugOutput && debugOutput("AIRControl[" + getTimer() + "]: Completed native function call, RAW OUTPUT: " + statesString);
 			
 			if(statesString === null)
 			{
@@ -160,6 +182,12 @@ package com.alexomara.ane.AIRControl
 					il = states.length;
 					for(i = 0; i < il; i++)
 					{
+						//Skip the debug output if present.
+						if(debugMode && i == il-1 && states[i].indexOf("DEBUG") === 0)
+						{
+							continue;
+						}
+						
 						//Split the details about this controller on the delimiter.
 						state = states[i].split("\t");
 						if(state.length < 8)
@@ -167,6 +195,9 @@ package com.alexomara.ane.AIRControl
 							//Invalid information, skip controller.
 							continue;
 						}
+						
+						//Output start of controller states.
+						debugOutput && debugOutput("AIRControl[" + getTimer() + "]: Parsing state started for controller ID: " + state[0]);
 						
 						//Read in data about the controller, making sure fields that are not available or underscores are empty arrays.
 						ID = uint(state[0]);
@@ -202,6 +233,8 @@ package com.alexomara.ane.AIRControl
 								_controllers.push(controller);
 								//Null this controller entry in the detached vector and break off the loop.
 								_controllersDetached[j] = null;
+								//Output controller matched.
+								debugOutput && debugOutput("AIRControl[" + getTimer() + "]: Controller matched ID: " + ID);
 								break;
 							}
 						}
@@ -211,6 +244,8 @@ package com.alexomara.ane.AIRControl
 						{
 							controller = new AIRControlController(ID, axes.length, povs.length/2, buttons.length, axesLetters, vendorID, productID, name);
 							_controllersAttached.push(controller);
+							//Output controller not matched.
+							debugOutput && debugOutput("AIRControl[" + getTimer() + "]: Controller new ID: " + ID);
 						}
 						
 						//Update the inputs on the controller.
@@ -230,6 +265,8 @@ package com.alexomara.ane.AIRControl
 								if(!_eventCache[axis])
 								{
 									_eventCache[axis] = new AIRControlControllerEvent(AIRControlControllerEvent.AXIS_CHANGE, controller, axis, j);
+									//Output new event creation.
+									debugOutput && debugOutput("AIRControl[" + getTimer() + "]: New AXIS_CHANGE event object for controller ID: " + ID + " axis: " + j);
 								}
 								//Fire events.
 								axis.dispatchEvent(_eventCache[axis]);
@@ -254,6 +291,8 @@ package com.alexomara.ane.AIRControl
 								if(!_eventCache[pov])
 								{
 									_eventCache[pov] = new AIRControlControllerEvent(AIRControlControllerEvent.POV_CHANGE, controller, pov, j);
+									//Output new event creation.
+									debugOutput && debugOutput("AIRControl[" + getTimer() + "]: New POV_CHANGE event object for controller ID: " + ID + " POV: " + j);
 								}
 								//Fire events.
 								pov.dispatchEvent(_eventCache[pov]);
@@ -276,14 +315,21 @@ package com.alexomara.ane.AIRControl
 								if(!_eventCache[button])
 								{
 									_eventCache[button] = new AIRControlControllerEvent(AIRControlControllerEvent.BUTTON_CHANGE, controller, button, j);
+									//Output new event creation.
+									debugOutput && debugOutput("AIRControl[" + getTimer() + "]: New BUTTON_CHANGE event object for controller ID: " + ID + " button: " + j);
 								}
 								//Fire events.
 								button.dispatchEvent(_eventCache[button]);
 								controller.dispatchEvent(_eventCache[button]);
 							}
 						}
+						//Output completion of controller states.
+						debugOutput && debugOutput("AIRControl[" + getTimer() + "]: Parsing state completed for controller ID: " + state[0]);
 					}
 				}
+				
+				//Output current execution state.
+				debugOutput && debugOutput("AIRControl[" + getTimer() + "]: Starting detach event dispatching.");
 				
 				//Loop over the detached controllers, firing events.
 				il = _controllersDetached.length;
@@ -299,6 +345,9 @@ package com.alexomara.ane.AIRControl
 				//Empty the list.
 				_controllersDetached.length = 0;
 				
+				//Output current execution state.
+				debugOutput && debugOutput("AIRControl[" + getTimer() + "]: Completed detach event dispatching, starting attach event dispatching.");
+				
 				//Loop over the attached controllers, firing events.
 				il = _controllersAttached.length;
 				for(i = 0; i < il; i++)
@@ -311,6 +360,9 @@ package com.alexomara.ane.AIRControl
 				//Empty the list.
 				_controllersAttached.length = 0;
 			}
+			
+			//Output finished.
+			debugOutput && debugOutput("AIRControl[" + getTimer() + "]: Completed update.");
 		}
 		
 		/**

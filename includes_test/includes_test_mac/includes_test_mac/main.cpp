@@ -5,7 +5,7 @@ using namespace std;
 
 void runLoopTimerCallback()
 {
-	cout << ControlStates() << endl;
+	cout << ControlStates(true) << endl;
 }
 
 int main()

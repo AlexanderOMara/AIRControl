@@ -28,10 +28,95 @@ freely, subject to the following restrictions:
 #include <sstream>
 #include <vector>
 
+//Data structure for controllers.
+struct ControlDevice {
+	bool connected;
+	unsigned int ID;
+	std::string * IDstr;
+	std::string * name;
+	WORD vendorID;
+	std::string * vendorIDstr;
+	WORD productID;
+	std::string * productIDstr;
+	std::string * axesLetters;
+	//X and Y axes are required.
+	bool axisZ;
+	bool axisR;
+	bool axisU;
+	bool axisV;
+	int axisXmin;
+	int axisXmax;
+	int axisYmin;
+	int axisYmax;
+	int axisZmin;
+	int axisZmax;
+	int axisRmin;
+	int axisRmax;
+	int axisUmin;
+	int axisUmax;
+	int axisVmin;
+	int axisVmax;
+	bool pov;
+	unsigned int buttons;
+	JOYINFOEX joyinfo;
+	JOYCAPS joycaps;
+	ControlDevice()
+	{
+		connected = false;
+		ID = 0;
+		IDstr = new std::string();
+		name = new std::string();
+		vendorID = 0;
+		vendorIDstr = new std::string();
+		productID = 0;
+		productIDstr = new std::string();
+		axesLetters = new std::string();
+		axisZ = false;
+		axisR = false;
+		axisU = false;
+		axisV = false;
+		axisXmin = 0;
+		axisXmax = 0;
+		axisYmin = 0;
+		axisYmax = 0;
+		axisZmin = 0;
+		axisZmax = 0;
+		axisRmin = 0;
+		axisRmax = 0;
+		axisUmin = 0;
+		axisUmax = 0;
+		axisVmin = 0;
+		axisVmax = 0;
+		pov = false;
+		buttons = 0;
+		joyinfo.dwSize = sizeof(joyinfo);
+		joyinfo.dwFlags = JOY_RETURNALL;
+	}
+	~ControlDevice()
+	{
+		delete IDstr;
+		delete name;
+		delete vendorIDstr;
+		delete productIDstr;
+		delete axesLetters;
+	}
+};
+
+
 //Set the total supported controller ID's (16 usually).
-static unsigned int controllers = joyGetNumDevs();
+static unsigned int joyNumDevs = joyGetNumDevs();
+
 //Vector of cached controller names read from the registry.
-static std::vector<std::string> controllerNames(controllers);
+static std::vector<std::string> controllerNames(joyNumDevs);
+
+//Vector of controller structures.
+static std::vector<ControlDevice *> devices(joyNumDevs);
+//Limit the scanning for new controllers.
+static DWORD lastControllerDetect = 0;
+//Save if has inited.
+static bool inited = false;
+//Remeber rather than recalculate.
+static unsigned int joycapsSize = sizeof(JOYCAPS);
 
 //Converts uint to string.
 static std::string uintToString(unsigned int i)
@@ -65,7 +150,7 @@ static std::string replaceCharacters(std::string str, char find, char replace)
 }
 
 //Looks up a controller description in the registry.
-static std::string controllerName(unsigned int controllerID, JOYCAPS joycaps, std::string fallbackName)
+static std::string controllerName(unsigned int controllerID, JOYCAPS joycaps)
 {
 	//Descrition of the controller.
 	char *productKey = (char*)malloc(0);
@@ -83,7 +168,7 @@ static std::string controllerName(unsigned int controllerID, JOYCAPS joycaps, st
 	std::string controllerDescription;
 
 	//Set it to fallback by default.
-	controllerDescription = fallbackName;
+	controllerDescription = joycaps.szPname;
 
 	//Merge the registry path together.
 	snprintf(subkey, 256, "%s\\%s\\%s", REGSTR_PATH_JOYCONFIG, joycaps.szRegKey, REGSTR_KEY_JOYCURR);
@@ -135,7 +220,7 @@ static std::string controllerName(unsigned int controllerID, JOYCAPS joycaps, st
 					//If the returned value is blank, use the fallback.
 					if(controllerDescription.empty())
 					{
-						controllerDescription = fallbackName;
+						controllerDescription = joycaps.szPname;
 					}
 				}
 			}
@@ -147,136 +232,258 @@ static std::string controllerName(unsigned int controllerID, JOYCAPS joycaps, st
 	return controllerDescription;
 }
 
+void ControlInit()
+{
+	//Create a controller object for each possible controller to keep polling calls to a minimum.
+	unsigned int devicesIndex;
+	ControlDevice * device;
+	for(devicesIndex = 0; devicesIndex < joyNumDevs; devicesIndex++)
+	{
+		device = new ControlDevice();
+		//Set controller ID from the first.
+		device->ID = JOYSTICKID1 + devicesIndex;
+		device->IDstr->assign(uintToString(device->ID));
+		devices.at(devicesIndex) = device;
+	}
+	inited = true;
+}
+
+void ControlTerminate()
+{
+	unsigned int devicesIndex;
+	for(devicesIndex = 0; devicesIndex < joyNumDevs; devicesIndex++)
+	{
+		delete devices.at(devicesIndex);
+	}
+	inited = false;
+}
+
 //Returns a delimited string of all the game controller states.
-std::string ControlStates()
+std::string ControlStates(bool debugMode)
 {
 	std::string state,
-		axes;
-
-	//For total supported controllers, current ID, and indexing.
-	unsigned int controllerID,
-		controller,
+		debugOut;
+	unsigned int devicesIndex,
 		controllerButton;
+	ControlDevice * device;
+	bool pollAll;
+	DWORD timeSinceBoot;
+
+	if(!inited)
+	{
+		return "";
+	}
+
+	pollAll = false;
+	timeSinceBoot = GetTickCount();
+
+	if(debugMode)
+	{
+		debugOut += "DEBUG: polling_start:" + uintToString(timeSinceBoot);
+	}
+
+	//Limit the checking for new controllers to once per second, also checking for DWORD rolling back over to 0 (mysterious performance bugs surrounding joyGetPosEx and joyGetDevCaps).
+	if(timeSinceBoot > lastControllerDetect + 1000 || timeSinceBoot < lastControllerDetect)
+	{
+		pollAll = true;
+		lastControllerDetect = timeSinceBoot;
+	}
+
+	if(debugMode)
+	{
+		debugOut += " poll_all:";
+		debugOut += (pollAll ? '1' : '0');
+		debugOut += " poll_max:" + uintToString(joyNumDevs);
+	}
 
 	//The string we will output the states as.
 	state = "";
 
 	//Loop through the possible controllers.
-	for(controller = 0; controller < controllers; controller++)
+	for(devicesIndex = 0; devicesIndex < joyNumDevs; devicesIndex++)
 	{
-		//Controller types.
-		JOYINFOEX joyinfo;
-		JOYCAPS joycaps;
-
-		//Set JOYINFOEX info.
-		joyinfo.dwSize = sizeof(joyinfo);
-		joyinfo.dwFlags = JOY_RETURNALL;
-
-		//Set controller ID, adding state information if available.
-		controllerID = JOYSTICKID1 + controller;
-		if(joyGetPosEx(controllerID, &joyinfo) == JOYERR_NOERROR && joyGetDevCaps(controllerID, &joycaps, sizeof(JOYCAPS)) == JOYERR_NOERROR)
+		//Get the device.
+		device = devices.at(devicesIndex);
+		//If polling all or the device is connected
+		if(device->connected || pollAll)
 		{
-			//Add controller to the list, delimit if necessary.
-			state += (state.empty() ? "" : "\t\t") + uintToString(controllerID) + '\t';
-
-			//Calculate the current axis position from either extremity on a range or -1 - 1 (((cur - min) / (max - min) * 2) - 1). X is always 0, Y is always 1.
-			state += floatToString(((float)(joyinfo.dwXpos - joycaps.wXmin) / (float)(joycaps.wXmax - joycaps.wXmin) * 2) - 1) + "," +
-				floatToString(((float)(joyinfo.dwYpos - joycaps.wYmin) / (float)(joycaps.wYmax - joycaps.wYmin) * 2) - 1);
-			axes = "XY";
-
-			//Add as many other axes as exist.
-			if(joycaps.wCaps & JOYCAPS_HASZ)
+			//Poll the controller for states and, if not currently connected, the capabilities.
+			if(joyGetPosEx(device->ID, &device->joyinfo) == JOYERR_NOERROR && (device->connected || joyGetDevCaps(device->ID, &device->joycaps, joycapsSize) == JOYERR_NOERROR))
 			{
-				state += ',' + floatToString(((float)(joyinfo.dwZpos - joycaps.wZmin) / (float)(joycaps.wZmax - joycaps.wZmin) * 2) - 1);
-				axes += 'Z';
-			}
-			if(joycaps.wCaps & JOYCAPS_HASR)
-			{
-				state += ',' + floatToString(((float)(joyinfo.dwRpos - joycaps.wRmin) / (float)(joycaps.wRmax - joycaps.wRmin) * 2) - 1);
-				axes += 'R';
-			}
-			if(joycaps.wCaps & JOYCAPS_HASU)
-			{
-				state += ',' + floatToString(((float)(joyinfo.dwUpos - joycaps.wUmin) / (float)(joycaps.wUmax - joycaps.wUmin) * 2) - 1);
-				axes += 'U';
-			}
-			if(joycaps.wCaps & JOYCAPS_HASV)
-			{
-				state += ',' + floatToString(((float)(joyinfo.dwVpos - joycaps.wVmin) / (float)(joycaps.wVmax - joycaps.wVmin) * 2) - 1);
-				axes += 'V';
-			}
-			state += '\t';
-
-			//Add the POV axis if available, else put a placeholder.
-			if(joycaps.wCaps & JOYCAPS_HASPOV)
-			{
-				std::string povx,
-					povy;
-
-				povx = "0";
-				povy = "0";
-
-				if(joyinfo.dwPOV != JOY_POVCENTERED)
+				//If the controller was not previousely connected, setup the object.
+				if(!device->connected)
 				{
-					if(joyinfo.dwPOV > JOY_POVFORWARD && joyinfo.dwPOV < JOY_POVBACKWARD)
+					device->connected = true;
+					device->vendorID = device->joycaps.wMid;
+					device->vendorIDstr->assign(uintToString(device->vendorID));
+					device->productID = device->joycaps.wPid;
+					device->productIDstr->assign(uintToString(device->productID));
+					device->name->assign(replaceCharacters(controllerName(device->ID, device->joycaps), '\t', ' '));
+					if(device->name->empty())
 					{
-						povx = "1";
-					}
-					else if(joyinfo.dwPOV > JOY_POVBACKWARD)
-					{
-						povx = "-1";
+						device->name->assign("Controller " + uintToString(device->ID + 1));
 					}
 
-					if(joyinfo.dwPOV > JOY_POVLEFT || joyinfo.dwPOV < JOY_POVRIGHT)
+					//X and Y axes are required.
+					device->axisXmin = device->joycaps.wXmin;
+					device->axisXmax = device->joycaps.wXmax;
+					device->axisYmin = device->joycaps.wYmin;
+					device->axisYmax = device->joycaps.wYmax;
+					device->axesLetters->assign("XY");
+					//Detect any additional axes.
+					if(device->joycaps.wCaps & JOYCAPS_HASZ)
 					{
-						povy = "-1";
+						device->axisZ = true;
+						device->axisZmin = device->joycaps.wZmin;
+						device->axisZmax = device->joycaps.wZmax;
+						device->axesLetters->push_back('Z');
+					}else{
+						device->axisZ = false;
+						device->axisZmin = 0;
+						device->axisZmax = 0;
 					}
-					else if(joyinfo.dwPOV > JOY_POVRIGHT && joyinfo.dwPOV < JOY_POVLEFT)
+					if(device->joycaps.wCaps & JOYCAPS_HASR)
 					{
-						povy = "1";
+						device->axisR = true;
+						device->axisRmin = device->joycaps.wRmin;
+						device->axisRmax = device->joycaps.wRmax;
+						device->axesLetters->push_back('R');
+					}else{
+						device->axisR = false;
+						device->axisRmin = 0;
+						device->axisRmax = 0;
+					}
+					if(device->joycaps.wCaps & JOYCAPS_HASU)
+					{
+						device->axisU = true;
+						device->axisUmin = device->joycaps.wUmin;
+						device->axisUmax = device->joycaps.wUmax;
+						device->axesLetters->push_back('U');
+					}else{
+						device->axisU = false;
+						device->axisUmin = 0;
+						device->axisUmax = 0;
+					}
+					if(device->joycaps.wCaps & JOYCAPS_HASV)
+					{
+						device->axisV = true;
+						device->axisVmin = device->joycaps.wVmin;
+						device->axisVmax = device->joycaps.wVmax;
+						device->axesLetters->push_back('V');
+					}else{
+						device->axisV = false;
+						device->axisVmin = 0;
+						device->axisVmax = 0;
+					}
+
+					//Detect POV.
+					device->pov = (device->joycaps.wCaps & JOYCAPS_HASPOV);
+
+					//Detect buttons.
+					device->buttons = device->joycaps.wNumButtons;
+				}
+
+				if(debugMode)
+				{
+					debugOut += " poll_" + *(device->IDstr) + "_s:" + uintToString(GetTickCount());
+				}
+
+				//Add controller to the list, delimit if necessary.
+				state += (state.empty() ? "" : "\t\t") + *(device->IDstr) + '\t';
+
+				//Calculate the current axis position from either extremity on a range or -1 - 1 (((cur - min) / (max - min) * 2) - 1). X is always 0, Y is always 1.
+				state +=
+					floatToString(((float)(device->joyinfo.dwXpos - device->axisXmin) / (float)(device->axisXmax - device->axisXmin) * 2) - 1) + "," +
+					floatToString(((float)(device->joyinfo.dwYpos - device->axisYmin) / (float)(device->axisYmax - device->axisYmin) * 2) - 1) +
+					(device->axisZ ? ',' + floatToString(((float)(device->joyinfo.dwZpos - device->joycaps.wZmin) / (float)(device->joycaps.wZmax - device->joycaps.wZmin) * 2) - 1) : "") +
+					(device->axisR ? ',' + floatToString(((float)(device->joyinfo.dwRpos - device->joycaps.wRmin) / (float)(device->joycaps.wRmax - device->joycaps.wRmin) * 2) - 1) : "") +
+					(device->axisU ? ',' + floatToString(((float)(device->joyinfo.dwUpos - device->joycaps.wUmin) / (float)(device->joycaps.wUmax - device->joycaps.wUmin) * 2) - 1) : "") +
+					(device->axisV ? ',' + floatToString(((float)(device->joyinfo.dwVpos - device->joycaps.wVmin) / (float)(device->joycaps.wVmax - device->joycaps.wVmin) * 2) - 1) : "") + '\t'
+				;
+
+				//Add the POV axes if available, else put a placeholder.
+				if(device->pov)
+				{
+					if(device->joyinfo.dwPOV != JOY_POVCENTERED)
+					{
+						if(device->joyinfo.dwPOV > JOY_POVFORWARD && device->joyinfo.dwPOV < JOY_POVBACKWARD)
+						{
+							state += "1";
+						}
+						else if(device->joyinfo.dwPOV > JOY_POVBACKWARD)
+						{
+							state += "-1";
+						}
+						else
+						{
+							state += "0";
+						}
+
+						if(device->joyinfo.dwPOV > JOY_POVLEFT || device->joyinfo.dwPOV < JOY_POVRIGHT)
+						{
+							state += ",-1";
+						}
+						else if(device->joyinfo.dwPOV > JOY_POVRIGHT && device->joyinfo.dwPOV < JOY_POVLEFT)
+						{
+							state += ",1";
+						}
+						else
+						{
+							state += ",0";
+						}
+					}
+					else
+					{
+						state += "0,0";
 					}
 				}
-				state += povx + ',' + povy;
-			}
-			else
-			{
-				state += '_';
-			}
-			state += '\t';
-
-			//Check if this controller has buttons, else put a placeholder.
-			if(joycaps.wNumButtons)
-			{
-				//Loop through the total supported joysticks. Button states are stored in 32 on/off bits.
-				for(controllerButton = 0; controllerButton < joycaps.wNumButtons; controllerButton++)
+				else
 				{
-					//Shift the bits to the right to make the last bit the button we want to check, and see if it is on by matching it with 1.
-					state += joyinfo.dwButtons >> controllerButton & 1 ? '1' : '0';
+					state += '_';
+				}
+				state += '\t';
+
+				//Check if this controller has buttons, else put a placeholder.
+				if(device->buttons)
+				{
+					//Loop through the total supported joysticks. Button states are stored in 32 on/off bits.
+					for(controllerButton = 0; controllerButton < device->buttons; controllerButton++)
+					{
+						//Shift the bits to the right to make the last bit the button we want to check, and see if it is on by matching it with 1.
+						state += device->joyinfo.dwButtons >> controllerButton & 1 ? '1' : '0';
+					}
+				}
+				else
+				{
+					state += '_';
+				}
+
+				//Finish the state string.
+				state += '\t' + *(device->axesLetters) + '\t' + *(device->vendorIDstr) + '\t' + *(device->productIDstr) + '\t' + *(device->name);
+
+				if(debugMode)
+				{
+					debugOut += " poll_" + *(device->IDstr) + "_e:" + uintToString(GetTickCount());
 				}
 			}
-			else
+			else if(device->connected)
 			{
-				state += '_';
+				//The controller was connected, but is no longer attached, remove.
+				device->connected = false;
 			}
-
-			//If the controller name hasn't been set, look it up in the registry and cache it, make sure the name does not contain the string delimiter.
-			if(controllerNames[controllerID].empty())
-			{
-				controllerNames[controllerID] = replaceCharacters(controllerName(controllerID, joycaps, joycaps.szPname), '\t', ' ');
-				//If the controller name is still empty, use a default name.
-				if(controllerNames[controllerID].empty())
-				{
-					controllerNames[controllerID] = "Controller " + uintToString(controllerID + 1);
-				}
-			}
-			//Finish the state string.
-			state += '\t' + axes + '\t' + uintToString(joycaps.wMid) + '\t' + uintToString(joycaps.wPid) + '\t' + controllerNames[controllerID];
 		}
-		else
-		{
-			//The controller has been disconnected, remove it from the cache.
-			controllerNames[controllerID].erase();
-		}
+	}
+
+	//If polling all controllers, update the last controller detect time.
+	if(pollAll)
+	{
+		lastControllerDetect = GetTickCount();
+	}
+
+	//If in debug mode, add the debug string.
+	if(debugMode)
+	{
+		state += (state.empty() ? "" : "\t\t") + debugOut + " polling_end:" + uintToString(GetTickCount());
 	}
 
 	//Return the state string.

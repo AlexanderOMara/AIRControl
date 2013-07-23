@@ -32,9 +32,16 @@ extern "C"
 	FREObject AIRControl(FREContext ctx, void* funcData, uint32_t argc, FREObject argv[])
 	{
 		FREObject result;
-		std::string str(ControlStates());
-		const uint8_t* msg = (const uint8_t*)str.c_str();
-		FRENewObjectFromUTF8(strlen((const char*)msg)+1, msg, &result);
+		uint32_t debugModeFRE = 0;
+		bool debugMode = false;
+		//If the optional debug argument is defined, check if in debug mode.
+		if(argc)
+		{
+			FREGetObjectAsBool(argv[0], &debugModeFRE);
+			debugMode = debugModeFRE;
+		}
+		const char * str = ControlStates(debugMode).c_str();
+		FRENewObjectFromUTF8(strlen(str)+1, (const uint8_t *)str, &result);
 		return result;
 	}
 
@@ -61,6 +68,9 @@ extern "C"
 	//Called when the extension is loaded for the first time (ExtensionContext.createExtensionContext).
 	void initializer(void** extData, FREContextInitializer* ctxInitializer, FREContextFinalizer* ctxFinalizer)
 	{
+		//Initialize the controller library.
+		ControlInit();
+
 		*ctxInitializer = &contextInitializer;
 		*ctxFinalizer = &contextFinalizer;
 	}
@@ -68,6 +78,9 @@ extern "C"
 	//Called when the extension is unloaded.
 	void finalizer(void* extData)
 	{
+		//Terminate the controller library.
+		ControlTerminate();
+
 		return;
 	}
 }

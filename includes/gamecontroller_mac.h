@@ -28,6 +28,7 @@ freely, subject to the following restrictions:
 #include <sstream>
 #include <vector>
 #include <IOKit/hid/IOHIDLib.h>
+#include <mach/mach_time.h>
 
 //Data structure for controller axes.
 struct ControlDeviceElementAxis {
@@ -58,7 +59,7 @@ struct ControlDeviceElementButton {
 //Data structure for controllers.
 struct ControlDevice {
 	IOHIDDeviceRef device;
-	int ID;
+	unsigned int ID;
 	std::string * IDstr;
 	std::string * name;
 	int vendorID;
@@ -144,6 +145,14 @@ static std::string uintToString(unsigned int i)
 static std::string floatToString(float i)
 {
 	std::stringstream ss;
+	ss << i;
+	return ss.str();
+}
+
+//Converts uint64_t to string.
+static std::string uint64_tToString(uint64_t i)
+{
+	std::ostringstream ss;
 	ss << i;
 	return ss.str();
 }
@@ -532,16 +541,22 @@ void ControlTerminate()
 }
 
 //Returns a delimited string of all the game controller states.
-std::string ControlStates()
+std::string ControlStates(bool debugMode)
 {
 	//Only output data if properly initialized.
 	if(hidManager == NULL)
 	{
 		return "";
 	}
-	std::string state;
+	std::string state,
+		debugOut;
 	unsigned int devicesCount,
 		devicesIndex;
+	
+	if(debugMode)
+	{
+		debugOut += "DEBUG: polling_start:" + uint64_tToString(mach_absolute_time());
+	}
 	
 	//The string we will output the states as.
 	state = "";
@@ -552,6 +567,11 @@ std::string ControlStates()
 	{
 		ControlDevice * device;
 		device = devices.at(devicesIndex);
+		
+		if(debugMode)
+		{
+			debugOut += " poll_" + *(device->IDstr) + "_s:" + uint64_tToString(mach_absolute_time());
+		}
 		
 		//Delimit multiple controllers.
 		if(devicesIndex)
@@ -649,6 +669,17 @@ std::string ControlStates()
 		
 		//Finish the string.
 		state += '\t' + (device->axesLetters->empty() ? "_" : *(device->axesLetters)) + '\t' + *(device->vendorIDstr) + '\t' + *(device->productIDstr) + '\t' + *(device->name);
+		
+		if(debugMode)
+		{
+			debugOut += " poll_" + *(device->IDstr) + "_e:" + uint64_tToString(mach_absolute_time());
+		}
+	}
+	
+	//If in debug mode, add the debug string.
+	if(debugMode)
+	{
+		state += (state.empty() ? "" : "\t\t") + debugOut + " polling_end:" + uint64_tToString(mach_absolute_time());
 	}
 	
 	//Return the state string.

@@ -26,8 +26,8 @@ freely, subject to the following restrictions:
 LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 
 VS_VERSION_INFO    VERSIONINFO
-  FILEVERSION      1,0,0,0
-  PRODUCTVERSION   1,0,0,0
+  FILEVERSION      1,1,0,0
+  PRODUCTVERSION   1,1,0,0
   FILEFLAGSMASK    0x3fL // VS_FFI_FILEFLAGSMASK
 #ifdef _DEBUG
   FILEFLAGS        0x1L  // VS_FF_DEBUG|VS_FF_PRIVATEBUILD|VS_FF_PRERELEASE
@@ -47,14 +47,14 @@ VS_VERSION_INFO    VERSIONINFO
       VALUE "CompanyName",      "Alexander O'Mara\0"
       VALUE "Developer",        "Alexander O'Mara\0"
       VALUE "FileDescription",  "AIRControl Adobe AIR Native Extension\0"
-      VALUE "FileVersion",      "1.0.0.0\0"
+      VALUE "FileVersion",      "1.1.0.0\0"
       VALUE "InternalName",     "AIRControl\0"
       VALUE "LegalCopyright",   "Copyright © 2012-2013 Alexander O'Mara\0"
       VALUE "LegalTrademarks",  "Adobe® and AIR® are registered trademarks of Adobe Systems Incorporated.\0"
       VALUE "OriginalFilename", "AIRControl.dll\0"
       //VALUE "PrivateBuild",     "\0"
       VALUE "ProductName",      "AIRControl\0"
-      VALUE "ProductVersion",   "1.0.0.0\0"
+      VALUE "ProductVersion",   "1.1.0.0\0"
       //VALUE "SpecialBuild",     "\0"
       VALUE "Support",          "alexomara.com\0"
       VALUE "Users",            "Unlimited.\0"
